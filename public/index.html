@@ -1178,7 +1178,8 @@ function connectToServer() {
 }
 
 function connectWS() {
-  ws = new WebSocket('ws://' + location.host);
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  ws = new WebSocket(proto + location.host);
 
   ws.onopen = () => console.log('WebSocket подключён');
 
@@ -1239,6 +1240,11 @@ function setTab(tab) {
     document.getElementById('tabLogin').classList.toggle('active', isLogin);
     document.getElementById('tabReg').classList.toggle('active', !isLogin);
     clearAuthError();
+    // Очищаем все поля при переключении вкладок
+    ['loginUser','loginPass','regName','regUser','regPass','regPass2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
 }
 
 function showAuthError(msg) {
@@ -1252,32 +1258,33 @@ function clearAuthError() {
 
 function doLogin() {
     clearAuthError();
-    const user = document.getElementById('loginUser').value.trim();
+    const user = document.getElementById('loginUser').value.trim().toLowerCase();
     const pass = document.getElementById('loginPass').value;
     if (!user || !pass) return showAuthError('Заполните все поля');
-    const users = getUsers();
-    if (!users[user]) return showAuthError('Пользователь не найден');
-    if (users[user].password !== btoa(unescape(encodeURIComponent(pass)))) return showAuthError('Неверный пароль');
+    const freshUsers = getUsers();
+    if (!freshUsers[user]) return showAuthError('Пользователь не найден');
+    if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) return showAuthError('Неверный пароль');
     Store.set('void_session', user);
-    enterApp(user, users[user]);
+    enterApp(user, freshUsers[user]);
 }
 
 function doRegister() {
     clearAuthError();
     const name  = document.getElementById('regName').value.trim();
-    const user  = document.getElementById('regUser').value.trim();
+    const user  = document.getElementById('regUser').value.trim().toLowerCase();
     const pass  = document.getElementById('regPass').value;
     const pass2 = document.getElementById('regPass2').value;
     if (!name || !user || !pass) return showAuthError('Заполните все поля');
     if (pass.length < 6) return showAuthError('Пароль минимум 6 символов');
     if (pass !== pass2) return showAuthError('Пароли не совпадают');
     if (!/^[a-zа-я0-9_]+$/i.test(user)) return showAuthError('Только буквы, цифры и _');
-    const users = getUsers();
-    if (users[user]) return showAuthError('Имя пользователя занято');
-    users[user] = { name, password: btoa(unescape(encodeURIComponent(pass))), status: 'online', accent: '#6b8afd' };
-    saveUsers(users);
+    // Всегда читаем свежие данные из хранилища
+    const freshUsers = getUsers();
+    if (freshUsers[user]) return showAuthError('Имя пользователя занято');
+    freshUsers[user] = { name, password: btoa(unescape(encodeURIComponent(pass))), status: 'online', accent: '#6b8afd' };
+    saveUsers(freshUsers);
     Store.set('void_session', user);
-    enterApp(user, users[user]);
+    enterApp(user, freshUsers[user]);
 }
 
 function enterApp(username, userData) {
@@ -1286,6 +1293,7 @@ function enterApp(username, userData) {
     setTimeout(() => { screen.style.display = 'none'; }, 350);
     document.getElementById('app').style.display = 'flex';
     initApp(username, userData);
+    connectToServer();
 }
 
 function logout() {
@@ -1294,10 +1302,7 @@ function logout() {
 }
 
 
-function enterApp(username, data) {
-    document.getElementById('app').style.display = 'flex';
-    initApp(username, data);
-}
+
 
 
 // ── STATE ────────────────────────────────────────────────
@@ -1485,18 +1490,19 @@ function sendMsg() {
         cancelEdit();
     } else {
         chats[activeId].messages.push({ id: Date.now(), type: 'sent', text, time: now() });
-        // Отправляем на сервер если подключены
-if (useServer && ws && ws.readyState === 1) {
-  ws.send(JSON.stringify({
-    type: 'message',
-    chat_id: Number(activeId),
-    text: text,
-    is_sent: true,
-    time: now()
-  }));
-}
         chats[activeId].updated = Date.now();
-        botReply();
+        if (useServer && ws && ws.readyState === 1) {
+            ws.send(JSON.stringify({
+                type: 'message',
+                chat_id: Number(activeId),
+                text: text,
+                is_sent: true,
+                time: now(),
+                sender: currentUsername
+            }));
+        } else {
+            botReply();
+        }
     }
     input.value = '';
     renderMsgs();
@@ -2033,6 +2039,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('authScreen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
         initApp(session, users[session]);
+        connectToServer();
          // Пробуем подключиться к серверу
     connectToServer();
     } else {
