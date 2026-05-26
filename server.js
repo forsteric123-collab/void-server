@@ -5,7 +5,11 @@ const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
-const db = new Database(process.env.DB_PATH || '/app/data/void.db');
+const fs = require('fs');
+const dbPath = process.env.DB_PATH || '/app/data/void.db';
+// Создать папку если не существует
+try { fs.mkdirSync(require('path').dirname(dbPath), { recursive: true }); } catch(e) {}
+const db = new Database(dbPath);
 app.use(express.json({ limit: '10mb' }));
 
 // ── Таблицы ──────────────────────────────────────────────
