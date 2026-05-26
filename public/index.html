@@ -840,6 +840,19 @@
             font-size:0.65rem; color:var(--text-3); padding:6px 14px 2px;
             text-transform: uppercase; letter-spacing: 0.5px;
         }
+
+        /* ── E2E ENCRYPTION UI ───────────────────────── */
+        .e2e-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.65rem; color: var(--green);
+            background: rgba(64,192,116,0.1);
+            border: 1px solid rgba(64,192,116,0.2);
+            border-radius: 20px; padding: 2px 7px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .e2e-badge.pending { color: var(--text-3); background: transparent; border-color: var(--border); }
+        .chat-header-e2e { margin-left: 6px; }
+        .msg-bubble.encrypted-pending { opacity: 0.7; }
         /* ── WALLPAPER ───────────────────────────────── */
         .messages-area.has-wallpaper {
             background-attachment: local;
@@ -1312,7 +1325,10 @@
                     <div class="chat-header-ava" id="hdrAva"></div>
                     <div>
                         <div class="chat-header-name" id="hdrName"></div>
-                        <div class="chat-header-sub" id="hdrSub"></div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <div class="chat-header-sub" id="hdrSub"></div>
+                            <span class="e2e-badge pending" id="e2eBadge" title="Сквозное шифрование">🔒 E2E</span>
+                        </div>
                     </div>
                 </div>
                 <div class="chat-header-actions">
@@ -1384,49 +1400,44 @@
 let ws;
 let useServer = false; // переключим в true когда сервер ответит
 
+// currentRoomKey — ключ комнаты в которой сейчас находимся
+let currentRoomKey = null;
+
 function connectToServer() {
-  // Пробуем загрузить чаты с сервера
   fetch('/api/chats')
     .then(r => r.json())
     .then(serverChats => {
       if (!serverChats.length) return;
       useServer = true;
 
-      // Конвертируем формат сервера в формат нашего приложения
+      // Добавляем серверные чаты (общие, не ЛС) в список
       serverChats.forEach(c => {
-        chats[String(c.id)] = {
-          name: c.name,
-          avatar: c.avatar || '💬',
-          type: c.type || 'Чат',
-          unread: 0,
-          updated: Date.now(),
-          pinned: null,
-          messages: []
-        };
+        const cid = 'srv_' + c.id;
+        if (!chats[cid]) {
+          chats[cid] = {
+            name: c.name,
+            avatar: c.avatar || '💬',
+            type: c.type || 'Чат',
+            unread: 0,
+            updated: Date.now(),
+            pinned: null,
+            messages: [],
+            roomKey: c.room_key,
+            isServer: true
+          };
+        }
       });
 
-      // Загружаем сообщения первого чата
-      const firstId = String(serverChats[0].id);
-      fetch('/api/messages/' + firstId)
-        .then(r => r.json())
-        .then(msgs => {
-          msgs.forEach(m => {
-            chats[firstId].messages.push({
-              id: m.id,
-              text: m.text,
-              type: m.is_sent ? 'sent' : 'received',
-              time: m.time || '00:00'
-            });
-          });
-          renderChats();
-          switchChat(firstId);
-        });
-
-      // Подключаем WebSocket для живых сообщений
       connectWS();
+      renderChats();
+
+      // Переключаемся на первый серверный чат
+      const firstSrv = Object.keys(chats).find(id => chats[id].isServer);
+      if (firstSrv) {
+        switchChat(firstSrv);
+      }
     })
     .catch(() => {
-      // Сервер недоступен — работаем локально как раньше
       console.log('Сервер недоступен, работаем локально');
     });
 }
@@ -1435,59 +1446,77 @@ function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   ws = new WebSocket(proto + location.host);
 
-  ws.onopen = () => console.log('WebSocket подключён');
+  ws.onopen = () => {
+    console.log('WebSocket подключён');
+    // Войти в текущую комнату если есть
+    if (currentRoomKey) joinRoom(currentRoomKey);
+  };
 
   ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
+
+    if (data.type === 'joined') {
+      console.log('Вошли в комнату:', data.roomKey);
+      return;
+    }
+
     if (data.type === 'message') {
       const m = data.msg;
-      const cid = String(m.chat_id);
-      if (!chats[cid]) return;
+      const rk = m.room_key;
+
+      // Найти чат по roomKey
+      const cid = Object.keys(chats).find(id => chats[id].roomKey === rk);
+      if (!cid) return;
 
       const isMine = m.sender === currentUsername;
 
       if (isMine) {
-        // Заменяем временное сообщение на подтверждённое с сервера
         const tmpIdx = chats[cid].messages.findIndex(x => x.id === m.tmpId);
         if (tmpIdx !== -1) {
           chats[cid].messages[tmpIdx].id = m.id;
         } else {
-          // На случай если tmpId не совпал — проверяем дубликат по id
           const exists = chats[cid].messages.find(x => x.id === m.id);
           if (!exists) {
-            chats[cid].messages.push({
-              id: m.id, text: m.text,
-              type: 'sent', time: m.time,
-              sender: m.sender
-            });
+            chats[cid].messages.push({ id: m.id, text: m.text, type: 'sent', time: m.time, sender: m.sender });
           }
         }
       } else {
-        // Чужое сообщение — просто добавляем
         const exists = chats[cid].messages.find(x => x.id === m.id);
         if (!exists) {
-          chats[cid].messages.push({
-            id: m.id, text: m.text,
-            type: 'received', time: m.time,
-            sender: m.sender, replyTo: m.replyTo || null
-          });
+          chats[cid].messages.push({ id: m.id, text: m.text, type: 'received', time: m.time, sender: m.sender, replyTo: m.replyTo || null });
         }
       }
 
-      if (cid === activeId) {
-        renderMsgs(); // re-render only affected chat
-      } else {
-        chats[cid].unread = (chats[cid].unread || 0) + 1;
-      }
+      if (cid === activeId) renderMsgs();
+      else chats[cid].unread = (chats[cid].unread || 0) + 1;
       chats[cid].updated = Date.now();
       renderChats();
     }
   };
 
-  ws.onclose = () => {
-    // Переподключаемся через 3 сек если соединение упало
-    setTimeout(connectWS, 3000);
-  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+function joinRoom(roomKey) {
+  if (!ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'join', username: currentUsername, roomKey }));
+  currentRoomKey = roomKey;
+}
+
+// Загрузить историю комнаты с сервера
+function loadRoomHistory(cid, roomKey) {
+  fetch('/api/messages/' + roomKey)
+    .then(r => r.json())
+    .then(msgs => {
+      chats[cid].messages = msgs.map(m => ({
+        id: m.id,
+        text: m.text,
+        type: m.sender === currentUsername ? 'sent' : 'received',
+        time: m.time || '00:00',
+        sender: m.sender
+      }));
+      renderMsgs();
+    });
 }
 // ── STORAGE HELPERS ──────────────────────────────────────
 // Safe storage — falls back to memory if localStorage blocked
@@ -1594,6 +1623,7 @@ let currentUsername = null;
 
 function initApp(username, userData) {
     currentUsername = username;
+    initE2E(username); // запускаем E2E в фоне
     const key = `void_chats_${username}`;
     chats = Store.get(key) || {
         '1': { name: 'Избранное', avatar: '🌟', type: 'Заметки', isSystem: true, unread: 0, updated: Date.now(), pinned: null,
@@ -1693,6 +1723,20 @@ function switchChat(id) {
     document.getElementById('hdrAva').textContent = c.avatar;
     document.getElementById('hdrName').textContent = c.name;
     document.getElementById('hdrSub').textContent = c.type;
+    const badge = document.getElementById('e2eBadge');
+    if (badge) {
+        if (c.type === 'ЛС' && e2eReady) {
+            badge.textContent = '🔒 E2E';
+            badge.className = 'e2e-badge';
+            badge.style.display = '';
+        } else if (c.type === 'ЛС') {
+            badge.textContent = '🔓 нет ключа';
+            badge.className = 'e2e-badge pending';
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
 
     const pb = document.getElementById('pinnedBar');
     if (c.pinned) {
@@ -1704,6 +1748,13 @@ function switchChat(id) {
 
     document.getElementById('msgSearch').value = '';
     applyWallpaperToArea(c.wallpaper || 'none');
+
+    // Если серверный чат — войти в комнату и подгрузить историю
+    if (c.roomKey && useServer) {
+        joinRoom(c.roomKey);
+        if (c.messages.length === 0) loadRoomHistory(id, c.roomKey);
+    }
+
     renderMsgs();
     renderChats();
     saveChats();
@@ -1799,16 +1850,38 @@ function sendMsg() {
         if (useServer && ws && ws.readyState === 1) {
             // Сервер подключён — добавляем локально сразу, сервер подтвердит через broadcast
             chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), sender: currentUsername, replyTo: replyingTo });
-            ws.send(JSON.stringify({
-                type: 'message',
-                chat_id: Number(activeId),
-                text: text,
-                is_sent: true,
-                time: now(),
-                sender: currentUsername,
-                tmpId: tmpId,
-                replyTo: replyingTo
-            }));
+            const activeRoomKey = chats[activeId]?.roomKey;
+            const isDM = chats[activeId]?.type === 'ЛС';
+            const dmPartner = chats[activeId]?.dmWith;
+
+            if (isDM && dmPartner && e2eReady) {
+                // ЛС — шифруем
+                encryptMessage(text, dmPartner).then(({ text: encText, encrypted }) => {
+                    ws.send(JSON.stringify({
+                        type: 'message',
+                        roomKey: activeRoomKey,
+                        text: encText,
+                        is_sent: true,
+                        time: now(),
+                        sender: currentUsername,
+                        tmpId: tmpId,
+                        replyTo: replyingTo,
+                        e2e: encrypted
+                    }));
+                });
+            } else {
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    roomKey: activeRoomKey,
+                    chat_id: activeRoomKey ? undefined : Number(activeId),
+                    text: text,
+                    is_sent: true,
+                    time: now(),
+                    sender: currentUsername,
+                    tmpId: tmpId,
+                    replyTo: replyingTo
+                }));
+            }
         } else {
             chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), replyTo: replyingTo });
             botReply();
@@ -2086,6 +2159,209 @@ function updateThemeIcon(isLight) {
 
 
 
+
+
+// ══════════════════════════════════════════════════════════
+// E2E ШИФРОВАНИЕ (Web Crypto API — RSA-OAEP + AES-GCM)
+// ══════════════════════════════════════════════════════════
+//
+// Схема:
+// 1. При регистрации генерируется пара RSA ключей
+// 2. Публичный ключ хранится в localStorage (доступен всем)
+// 3. Приватный ключ хранится ТОЛЬКО локально, никогда не уходит на сервер
+// 4. При отправке сообщения:
+//    a. Генерируется случайный AES-ключ
+//    b. Сообщение шифруется AES-GCM
+//    c. AES-ключ шифруется RSA публичным ключом получателя
+//    d. На сервер уходит только зашифрованный blob
+// 5. Получатель расшифровывает AES-ключ своим RSA приватным ключом
+//    и читает сообщение
+
+const E2E = {
+
+    // Генерация пары ключей RSA-OAEP
+    async generateKeyPair() {
+        const pair = await crypto.subtle.generateKey(
+            { name: 'RSA-OAEP', modulusLength: 2048,
+              publicExponent: new Uint8Array([1,0,1]),
+              hash: 'SHA-256' },
+            true, ['encrypt', 'decrypt']
+        );
+        return pair;
+    },
+
+    // Экспорт публичного ключа в base64
+    async exportPublicKey(key) {
+        const raw = await crypto.subtle.exportKey('spki', key);
+        return btoa(String.fromCharCode(...new Uint8Array(raw)));
+    },
+
+    // Экспорт приватного ключа в base64 (только локально)
+    async exportPrivateKey(key) {
+        const raw = await crypto.subtle.exportKey('pkcs8', key);
+        return btoa(String.fromCharCode(...new Uint8Array(raw)));
+    },
+
+    // Импорт публичного ключа из base64
+    async importPublicKey(b64) {
+        const raw = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        return crypto.subtle.importKey(
+            'spki', raw,
+            { name: 'RSA-OAEP', hash: 'SHA-256' },
+            false, ['encrypt']
+        );
+    },
+
+    // Импорт приватного ключа из base64
+    async importPrivateKey(b64) {
+        const raw = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        return crypto.subtle.importKey(
+            'pkcs8', raw,
+            { name: 'RSA-OAEP', hash: 'SHA-256' },
+            false, ['decrypt']
+        );
+    },
+
+    // Шифрование сообщения для получателя
+    async encrypt(plaintext, recipientPublicKeyB64) {
+        // 1. Генерируем одноразовый AES ключ
+        const aesKey = await crypto.subtle.generateKey(
+            { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+        );
+        // 2. Шифруем текст AES-GCM
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encoded = new TextEncoder().encode(plaintext);
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv }, aesKey, encoded
+        );
+        // 3. Экспортируем AES ключ и шифруем его RSA публичным ключом получателя
+        const rawAes = await crypto.subtle.exportKey('raw', aesKey);
+        const pubKey = await this.importPublicKey(recipientPublicKeyB64);
+        const encryptedKey = await crypto.subtle.encrypt(
+            { name: 'RSA-OAEP' }, pubKey, rawAes
+        );
+        // 4. Собираем пакет
+        return {
+            ct: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+            iv: btoa(String.fromCharCode(...iv)),
+            ek: btoa(String.fromCharCode(...new Uint8Array(encryptedKey))),
+            e2e: true
+        };
+    },
+
+    // Расшифровка сообщения своим приватным ключом
+    async decrypt(pkg, privateKeyB64) {
+        try {
+            const privKey = await this.importPrivateKey(privateKeyB64);
+            // 1. Расшифровываем AES ключ
+            const encryptedKey = Uint8Array.from(atob(pkg.ek), c => c.charCodeAt(0));
+            const rawAes = await crypto.subtle.decrypt(
+                { name: 'RSA-OAEP' }, privKey, encryptedKey
+            );
+            // 2. Импортируем AES ключ
+            const aesKey = await crypto.subtle.importKey(
+                'raw', rawAes, { name: 'AES-GCM' }, false, ['decrypt']
+            );
+            // 3. Расшифровываем текст
+            const iv = Uint8Array.from(atob(pkg.iv), c => c.charCodeAt(0));
+            const ct = Uint8Array.from(atob(pkg.ct), c => c.charCodeAt(0));
+            const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ct);
+            return new TextDecoder().decode(plain);
+        } catch(e) {
+            return '🔒 [зашифровано]';
+        }
+    },
+
+    // Инициализация — создать или загрузить ключи пользователя
+    async init(username) {
+        const stored = Store.get('e2e_keys_' + username);
+        if (stored) {
+            console.log('E2E: ключи загружены');
+            return stored;
+        }
+        console.log('E2E: генерируем новые ключи...');
+        const pair = await this.generateKeyPair();
+        const pub  = await this.exportPublicKey(pair.publicKey);
+        const priv = await this.exportPrivateKey(pair.privateKey);
+        const keys = { pub, priv };
+        Store.set('e2e_keys_' + username, keys);
+        // Публичный ключ публикуем для всех в общем хранилище
+        const allPubs = Store.get('e2e_public_keys') || {};
+        allPubs[username] = pub;
+        Store.set('e2e_public_keys', allPubs);
+        console.log('E2E: ключи созданы ✓');
+        return keys;
+    },
+
+    // Получить публичный ключ пользователя
+    getPublicKey(username) {
+        const allPubs = Store.get('e2e_public_keys') || {};
+        return allPubs[username] || null;
+    },
+
+    // Опубликовать свой публичный ключ (вызывается при входе)
+    publishPublicKey(username, pubKey) {
+        const allPubs = Store.get('e2e_public_keys') || {};
+        allPubs[username] = pubKey;
+        Store.set('e2e_public_keys', allPubs);
+    }
+};
+
+// Глобальные ключи текущего пользователя
+let myE2EKeys = null;
+let e2eReady = false;
+
+async function initE2E(username) {
+    try {
+        myE2EKeys = await E2E.init(username);
+        E2E.publishPublicKey(username, myE2EKeys.pub);
+        e2eReady = true;
+        updateE2EBadge(true);
+        console.log('E2E шифрование активно ✓');
+    } catch(e) {
+        console.warn('E2E недоступен:', e);
+        updateE2EBadge(false);
+    }
+}
+
+function updateE2EBadge(ready) {
+    const badge = document.getElementById('e2eBadge');
+    if (!badge) return;
+    if (ready) {
+        badge.textContent = '🔒 E2E';
+        badge.className = 'e2e-badge';
+        badge.title = 'Сквозное шифрование активно';
+    } else {
+        badge.textContent = '🔓';
+        badge.className = 'e2e-badge pending';
+        badge.title = 'Шифрование недоступно';
+    }
+}
+
+// Зашифровать сообщение перед отправкой
+async function encryptMessage(text, recipientUsername) {
+    if (!e2eReady || !myE2EKeys) return { text, encrypted: false };
+    const recipientPub = E2E.getPublicKey(recipientUsername);
+    if (!recipientPub) return { text, encrypted: false };
+    try {
+        const pkg = await E2E.encrypt(text, recipientPub);
+        return { text: JSON.stringify(pkg), encrypted: true };
+    } catch(e) {
+        return { text, encrypted: false };
+    }
+}
+
+// Расшифровать входящее сообщение
+async function decryptMessage(text) {
+    if (!e2eReady || !myE2EKeys || !text) return text;
+    try {
+        const pkg = JSON.parse(text);
+        if (!pkg.e2e) return text;
+        return await E2E.decrypt(pkg, myE2EKeys.priv);
+    } catch(e) {
+        return text; // не зашифровано — вернуть как есть
+    }
+}
 
 // ── GLOBAL SEARCH ─────────────────────────────────────────
 function globalSearch(q) {
@@ -2457,37 +2733,76 @@ function searchPeople(q) {
 }
 
 function openDM(username) {
-    // Проверяем есть ли уже ЛС с этим юзером
-    const dmKey = [currentUsername, username].sort().join('_');
-    const existingId = Object.keys(chats).find(id => chats[id].dmKey === dmKey);
     closeOverlay('peopleOverlay');
+    closeOverlay('userProfileOverlay');
 
+    const roomKey = 'dm_' + [currentUsername, username].sort().join('_');
+
+    // Проверяем есть ли уже такой чат локально
+    const existingId = Object.keys(chats).find(id => chats[id].roomKey === roomKey);
     if (existingId) {
         switchChat(existingId);
         return;
     }
 
-    // Создаём новый ЛС чат
-    const users = getUsers();
-    const u = users[username];
-    const id = String(Date.now());
-    chats[id] = {
-        name: u ? u.name : username,
-        avatar: u && u.avatar ? '' : (u ? u.name[0] : username[0]).toUpperCase(),
+    const localUsers = getUsers();
+    const u = localUsers[username];
+    const displayName = u ? (u.name || username) : username;
+
+    if (useServer) {
+        // Создаём комнату через сервер
+        fetch('/api/dm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user1: currentUsername, user2: username })
+        })
+        .then(r => r.json())
+        .then(serverChat => {
+            const cid = 'dm_' + serverChat.id;
+            chats[cid] = {
+                name: displayName,
+                avatar: u && u.avatar ? '' : displayName[0].toUpperCase(),
+                avatarImg: u && u.avatar ? u.avatar : null,
+                type: 'ЛС',
+                unread: 0,
+                updated: Date.now(),
+                pinned: null,
+                messages: [],
+                roomKey: roomKey,
+                dmWith: username,
+                isServer: true
+            };
+            renderChats();
+            switchChat(cid);
+            saveChats();
+            showToast('💬 ЛС с ' + displayName);
+        })
+        .catch(() => createLocalDM(username, displayName, roomKey));
+    } else {
+        createLocalDM(username, displayName, roomKey);
+    }
+}
+
+function createLocalDM(username, displayName, roomKey) {
+    const localUsers = getUsers();
+    const u = localUsers[username];
+    const cid = 'dm_' + Date.now();
+    chats[cid] = {
+        name: displayName,
+        avatar: u && u.avatar ? '' : displayName[0].toUpperCase(),
         avatarImg: u && u.avatar ? u.avatar : null,
         type: 'ЛС',
         unread: 0,
         updated: Date.now(),
         pinned: null,
         messages: [],
-        dmKey: dmKey,
+        roomKey: roomKey,
         dmWith: username,
-        isSystem: false
     };
     renderChats();
-    switchChat(id);
+    switchChat(cid);
     saveChats();
-    showToast('💬 Личные сообщения с ' + (u ? u.name : username));
+    showToast('💬 ЛС с ' + displayName);
 }
 
 // ── CHAR COUNTER ─────────────────────────────────────────
