@@ -841,6 +841,161 @@
             text-transform: uppercase; letter-spacing: 0.5px;
         }
 
+
+
+        /* ── CONTACTS ────────────────────────────────── */
+        .contacts-tabs {
+            display: flex; gap: 0;
+            background: var(--surface2);
+            border-radius: var(--radius-sm);
+            padding: 3px; margin-bottom: 14px;
+        }
+        .contacts-tab {
+            flex: 1; text-align: center; padding: 7px;
+            font-size: 0.82rem; font-weight: 500;
+            cursor: pointer; border-radius: 7px;
+            color: var(--text-2); transition: all var(--transition);
+            user-select: none;
+        }
+        .contacts-tab.active { background: var(--surface3); color: var(--text); }
+        .contact-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 12px; border-radius: var(--radius-sm);
+            cursor: pointer; transition: background var(--transition);
+            position: relative;
+        }
+        .contact-item:hover { background: var(--surface2); }
+        .contact-ava {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: var(--surface3); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; overflow: hidden; position: relative;
+        }
+        .contact-ava img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+        .contact-online {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: var(--green); position: absolute;
+            bottom: 0; right: 0; border: 2px solid var(--surface);
+        }
+        .contact-info { flex: 1; min-width: 0; }
+        .contact-name { font-size: 0.88rem; font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .contact-nick { font-size: 0.72rem; color: var(--text-2);
+            font-family: 'JetBrains Mono', monospace; }
+        .contact-actions { display: flex; gap: 4px; opacity: 0; transition: opacity var(--transition); }
+        .contact-item:hover .contact-actions { opacity: 1; }
+        .contact-act-btn {
+            width: 26px; height: 26px; border-radius: 6px;
+            background: transparent; border: none; cursor: pointer;
+            color: var(--text-2); display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; transition: all var(--transition);
+        }
+        .contact-act-btn:hover { background: var(--surface3); color: var(--text); }
+        .contact-act-btn.danger:hover { color: var(--danger); }
+        .add-contact-area {
+            border: 1px dashed var(--border); border-radius: var(--radius-sm);
+            padding: 12px; text-align: center; cursor: pointer;
+            color: var(--text-2); font-size: 0.82rem;
+            transition: all var(--transition); margin-top: 8px;
+        }
+        .add-contact-area:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        /* ── CHAT INFO PANEL ─────────────────────────── */
+        .chat-info-overlay {
+            position: fixed; inset: 0;
+            z-index: 200;
+            display: flex; justify-content: flex-end;
+            pointer-events: none;
+        }
+        .chat-info-panel {
+            width: 300px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            height: 100%;
+            transform: translateX(100%);
+            transition: transform 0.28s ease;
+            pointer-events: all;
+            display: flex; flex-direction: column;
+            overflow-y: auto;
+        }
+        .chat-info-panel.open { transform: translateX(0); }
+        .cip-header {
+            padding: 18px 18px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .cip-title { font-size: 0.95rem; font-weight: 600; }
+        .cip-ava {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: var(--surface3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; margin: 20px auto 10px;
+            overflow: hidden; cursor: pointer; position: relative;
+        }
+        .cip-ava:hover::after {
+            content: '📷';
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; border-radius: 50%;
+        }
+        .cip-ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .cip-name { text-align: center; font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+        .cip-sub  { text-align: center; font-size: 0.75rem; color: var(--text-2); margin-bottom: 18px; }
+        .cip-section {
+            padding: 10px 16px 6px;
+            font-size: 0.65rem; color: var(--text-3);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .cip-field {
+            margin: 0 12px 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .cip-field label { font-size: 0.7rem; color: var(--text-2); display: block; margin-bottom: 4px; }
+        .cip-field input, .cip-field textarea {
+            width: 100%; background: transparent; border: none; outline: none;
+            color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.88rem;
+            resize: none;
+        }
+        .cip-field textarea { min-height: 52px; }
+        .cip-member {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 16px; cursor: pointer; transition: background var(--transition);
+        }
+        .cip-member:hover { background: var(--surface2); }
+        .cip-member-ava {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: var(--surface3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; flex-shrink: 0; overflow: hidden;
+        }
+        .cip-member-ava img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+        .cip-member-info { flex: 1; }
+        .cip-member-name { font-size: 0.85rem; font-weight: 500; }
+        .cip-member-tag  { font-size: 0.7rem; color: var(--text-2); font-family: 'JetBrains Mono',monospace; }
+        .cip-add-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 16px; cursor: pointer;
+            color: var(--accent); font-size: 0.85rem;
+            transition: background var(--transition);
+        }
+        .cip-add-btn:hover { background: var(--accent-dim); }
+        .cip-save-btn {
+            margin: 12px 12px 20px;
+            width: calc(100% - 24px);
+            padding: 11px; background: var(--accent);
+            border: none; border-radius: var(--radius-sm);
+            color: #fff; font-family: 'Inter',sans-serif;
+            font-size: 0.88rem; font-weight: 500; cursor: pointer;
+            transition: opacity var(--transition);
+        }
+        .cip-save-btn:hover { opacity: 0.88; }
+        /* Кликабельная шапка чата */
+        .chat-header-left { cursor: pointer; }
+        .chat-header-left:hover .chat-header-ava { opacity: 0.85; }
+        .chat-header-left:hover .chat-header-name { color: var(--accent); }
         /* ── E2E ENCRYPTION UI ───────────────────────── */
         .e2e-badge {
             display: inline-flex; align-items: center; gap: 4px;
@@ -1211,17 +1366,115 @@
 
     <!-- People search modal -->
     <div class="overlay" id="peopleOverlay">
-        <div class="modal">
+        <div class="modal" style="max-width:400px;">
             <div class="modal-head">
-                Люди
+                <span id="contactsModalTitle">Контакты</span>
                 <button class="modal-close" onclick="closeOverlay('peopleOverlay')">✕</button>
             </div>
-            <div class="field">
-                <label>Поиск по имени или @юзернейму</label>
-                <input type="text" id="peopleSearchInput" placeholder="Начните вводить..." oninput="searchPeople(this.value)">
+
+            <!-- Вкладки -->
+            <div class="contacts-tabs">
+                <div class="contacts-tab active" id="ctab1" onclick="switchContactsTab(1)">👥 Мои контакты</div>
+                <div class="contacts-tab" id="ctab2" onclick="switchContactsTab(2)">🔍 Найти</div>
             </div>
-            <div class="people-list" id="peopleList"></div>
-            <button class="ghost-btn" onclick="closeOverlay('peopleOverlay')">Закрыть</button>
+
+            <!-- Таб 1: Мои контакты -->
+            <div id="ctabContent1">
+                <div id="contactsList" style="max-height:320px;overflow-y:auto;"></div>
+                <div class="add-contact-area" onclick="switchContactsTab(2)">
+                    + Найти и добавить контакт
+                </div>
+            </div>
+
+            <!-- Таб 2: Поиск -->
+            <div id="ctabContent2" style="display:none;">
+                <div class="field" style="margin-bottom:10px;">
+                    <input type="text" id="peopleSearchInput" placeholder="Имя или @юзернейм..."
+                        oninput="searchPeople(this.value)"
+                        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;width:100%;box-sizing:border-box;">
+                </div>
+                <div class="people-list" id="peopleList" style="max-height:280px;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Переименовать контакт -->
+    <div class="overlay" id="renameContactOverlay">
+        <div class="modal" style="max-width:320px;">
+            <div class="modal-head">
+                Переименовать контакт
+                <button class="modal-close" onclick="closeOverlay('renameContactOverlay')">✕</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <div id="rcAva" style="width:44px;height:44px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;overflow:hidden;flex-shrink:0;"></div>
+                <div>
+                    <div id="rcRealName" style="font-size:0.82rem;color:var(--text-2);">Настоящее имя:</div>
+                    <div id="rcTag" style="font-size:0.72rem;color:var(--text-3);font-family:'JetBrains Mono',monospace;"></div>
+                </div>
+            </div>
+            <div class="field">
+                <label>Как отображать в контактах</label>
+                <input type="text" id="rcNickInput" placeholder="Мой псевдоним для этого человека">
+            </div>
+            <button class="primary-btn" onclick="saveContactNick()">Сохранить</button>
+            <button class="ghost-btn" onclick="closeOverlay('renameContactOverlay')">Отмена</button>
+        </div>
+    </div>
+
+
+    <!-- Chat / DM info side panel -->
+    <div class="chat-info-overlay" id="chatInfoOverlay" onclick="closeChatInfo(event)">
+        <div class="chat-info-panel" id="chatInfoPanel">
+            <div class="cip-header">
+                <span class="cip-title" id="cipTitle">Информация</span>
+                <button class="icon-btn" onclick="closeChatInfo()" style="width:24px;height:24px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+
+            <!-- Аватар чата -->
+            <div class="cip-ava" id="cipAva" onclick="changeChatAvatar()">💬
+                <input type="file" id="cipAvaFile" accept="image/*" style="display:none;" onchange="handleChatAvatarChange(this)">
+            </div>
+            <div class="cip-name" id="cipName"></div>
+            <div class="cip-sub"  id="cipSub"></div>
+
+            <!-- Основные поля -->
+            <div class="cip-section">Основное</div>
+            <div class="cip-field" id="cipNameField">
+                <label>Название</label>
+                <input type="text" id="cipNameInput" placeholder="Название чата">
+            </div>
+            <div class="cip-field">
+                <label>Описание</label>
+                <textarea id="cipDesc" placeholder="О чём этот чат..."></textarea>
+            </div>
+
+            <!-- Участники -->
+            <div class="cip-section" id="cipMembersSection">Участники</div>
+            <div id="cipMembersList"></div>
+            <div class="cip-add-btn" id="cipAddMemberBtn" onclick="openAddMember()">
+                <svg width="14" height="14" viewBox="0 0 24 24" style="fill:currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Добавить участника
+            </div>
+
+            <button class="cip-save-btn" onclick="saveChatInfo()">Сохранить</button>
+        </div>
+    </div>
+
+    <!-- Add member modal -->
+    <div class="overlay" id="addMemberOverlay">
+        <div class="modal">
+            <div class="modal-head">
+                Добавить участника
+                <button class="modal-close" onclick="closeOverlay('addMemberOverlay')">✕</button>
+            </div>
+            <div class="field">
+                <label>Поиск по юзернейму</label>
+                <input type="text" id="addMemberSearch" placeholder="username..." oninput="searchAddMember(this.value)">
+            </div>
+            <div class="people-list" id="addMemberList" style="max-height:220px;overflow-y:auto;"></div>
+            <button class="ghost-btn" onclick="closeOverlay('addMemberOverlay')">Закрыть</button>
         </div>
     </div>
 
@@ -1276,7 +1529,7 @@
                 <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Тема">
                     <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
                 </button>
-                <button class="icon-btn" onclick="openOverlay('peopleOverlay');searchPeople('')" title="Поиск людей">
+                <button class="icon-btn" onclick="openContactsModal()" title="Поиск людей">
                     <svg width="15" height="15" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                 </button>
                 <button class="icon-btn" onclick="openLangModal()" title="Язык">
@@ -1321,7 +1574,7 @@
 
         <div id="chatView" style="display:none;flex-direction:column;flex:1;min-height:0;">
             <div class="chat-header" id="chatHeader">
-                <div class="chat-header-left">
+                <div class="chat-header-left" onclick="openChatInfo()" title="Информация о чате">
                     <div class="chat-header-ava" id="hdrAva"></div>
                     <div>
                         <div class="chat-header-name" id="hdrName"></div>
@@ -1982,6 +2235,9 @@ function createChat() {
         avatar: document.getElementById('newEmoji').value.trim() || '💬',
         type: document.getElementById('newType').value,
         unread: 0, updated: Date.now(), pinned: null,
+        desc: '',
+        owner: currentUsername,
+        members: [currentUsername],
         messages: [{ id: Date.now(), type: 'received', text: `Пространство "${name}" создано.`, time: now() }]
     };
     document.getElementById('newName').value = '';
@@ -2363,6 +2619,342 @@ async function decryptMessage(text) {
     }
 }
 
+
+// ── CHAT INFO PANEL ────────────────────────────────────────
+function openChatInfo() {
+    const c = chats[activeId];
+    if (!c) return;
+
+    // Если ЛС — открываем профиль собеседника
+    if (c.type === 'ЛС' && c.dmWith) {
+        openUserProfile(c.dmWith);
+        return;
+    }
+
+    // Иначе — панель чата
+    const panel = document.getElementById('chatInfoPanel');
+    const overlay = document.getElementById('chatInfoOverlay');
+
+    // Заполняем данные
+    document.getElementById('cipTitle').textContent = c.type === 'Канал' ? 'Канал' : 'Чат';
+    document.getElementById('cipNameInput').value = c.name;
+    document.getElementById('cipDesc').value = c.desc || '';
+    document.getElementById('cipName').textContent = c.name;
+    document.getElementById('cipSub').textContent = c.type + (c.members ? ' · ' + c.members.length + ' участников' : '');
+
+    // Аватар
+    const cipAva = document.getElementById('cipAva');
+    if (c.avatarImg) cipAva.innerHTML = `<img src="${c.avatarImg}"><input type="file" id="cipAvaFile" accept="image/*" style="display:none;" onchange="handleChatAvatarChange(this)">`;
+    else cipAva.innerHTML = (c.avatar || '💬') + `<input type="file" id="cipAvaFile" accept="image/*" style="display:none;" onchange="handleChatAvatarChange(this)">`;
+
+    // Участники (скрываем для ЛС)
+    const isDM = c.type === 'ЛС';
+    document.getElementById('cipMembersSection').style.display = isDM ? 'none' : '';
+    document.getElementById('cipMembersList').style.display = isDM ? 'none' : '';
+    document.getElementById('cipAddMemberBtn').style.display = isDM ? 'none' : '';
+
+    renderCipMembers();
+
+    overlay.style.pointerEvents = 'all';
+    panel.classList.add('open');
+}
+
+function closeChatInfo(e) {
+    if (e && e.target !== document.getElementById('chatInfoOverlay')) return;
+    const panel = document.getElementById('chatInfoPanel');
+    const overlay = document.getElementById('chatInfoOverlay');
+    panel.classList.remove('open');
+    overlay.style.pointerEvents = 'none';
+}
+
+function changeChatAvatar() {
+    document.getElementById('cipAvaFile').click();
+}
+
+function handleChatAvatarChange(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const src = e.target.result;
+        chats[activeId].avatarImg = src;
+        chats[activeId].avatar = '';
+        const cipAva = document.getElementById('cipAva');
+        cipAva.innerHTML = `<img src="${src}"><input type="file" id="cipAvaFile" accept="image/*" style="display:none;" onchange="handleChatAvatarChange(this)">`;
+        // Обновить шапку
+        const hdrAva = document.getElementById('hdrAva');
+        hdrAva.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        renderChats();
+        saveChats();
+    };
+    reader.readAsDataURL(file);
+}
+
+function saveChatInfo() {
+    const c = chats[activeId];
+    const name = document.getElementById('cipNameInput').value.trim();
+    const desc = document.getElementById('cipDesc').value.trim();
+    if (name) {
+        c.name = name;
+        document.getElementById('cipName').textContent = name;
+        document.getElementById('hdrName').textContent = name;
+    }
+    c.desc = desc;
+    renderChats();
+    saveChats();
+    showToast('✓ Сохранено');
+}
+
+function renderCipMembers() {
+    const c = chats[activeId];
+    const list = document.getElementById('cipMembersList');
+    if (!list) return;
+    const members = c.members || [currentUsername];
+    const users = getUsers();
+    list.innerHTML = members.map(un => {
+        const u = users[un] || { name: un };
+        const avaHtml = u.avatar
+            ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+            : (u.name||un)[0].toUpperCase();
+        const isOwner = un === (c.owner || currentUsername);
+        return `<div class="cip-member" onclick="openUserProfile('${un}')">
+            <div class="cip-member-ava">${avaHtml}</div>
+            <div class="cip-member-info">
+                <div class="cip-member-name">${u.name || un}${isOwner ? ' 👑' : ''}</div>
+                <div class="cip-member-tag">@${un}</div>
+            </div>
+            ${un !== currentUsername ? `<button onclick="removeMember('${un}',event)" style="background:transparent;border:none;color:var(--text-3);cursor:pointer;font-size:0.75rem;padding:4px 6px;border-radius:6px;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-3)'">✕</button>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function openAddMember() {
+    document.getElementById('addMemberSearch').value = '';
+    document.getElementById('addMemberList').innerHTML = '';
+    searchAddMember('');
+    openOverlay('addMemberOverlay');
+}
+
+function searchAddMember(q) {
+    const c = chats[activeId];
+    const members = c.members || [currentUsername];
+    const users = getUsers();
+    const contacts = getContacts();
+
+    // Сначала показываем контакты, потом остальных
+    const contactEntries = Object.entries(contacts)
+        .filter(([un]) => !members.includes(un))
+        .map(([un, ct]) => [un, users[un] || {name: un}, ct]);
+
+    const otherEntries = Object.entries(users).filter(([un]) =>
+        !members.includes(un) && !contacts[un] &&
+        un !== currentUsername && (
+            !q.trim() ||
+            un.toLowerCase().includes(q.toLowerCase()) ||
+            (users[un].name||'').toLowerCase().includes(q.toLowerCase())
+        )
+    ).map(([un, u]) => [un, u, null]);
+
+    const filteredContacts = q.trim()
+        ? contactEntries.filter(([un, u, ct]) =>
+            un.toLowerCase().includes(q.toLowerCase()) ||
+            (ct && ct.nick||'').toLowerCase().includes(q.toLowerCase()) ||
+            (u.name||'').toLowerCase().includes(q.toLowerCase()))
+        : contactEntries;
+
+    const results = [...filteredContacts, ...otherEntries];
+
+    const list = document.getElementById('addMemberList');
+    if (!results.length) {
+        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:14px;">Никого не найдено</div>';
+        return;
+    }
+    list.innerHTML = results.map(([un, u, ct]) => {
+        const displayName = ct && ct.nick ? ct.nick : (u.name||un);
+        const ava = u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : displayName[0].toUpperCase();
+        const isContact = !!ct;
+        return `<div class="people-item" onclick="addMember('${un}')">
+            <div class="people-ava">${ava}</div>
+            <div class="people-info">
+                <div class="people-name">${displayName}${isContact ? ' ✓' : ''}</div>
+                <div class="people-tag">@${un}</div>
+            </div>
+            <span style="font-size:0.75rem;color:var(--accent);">+ добавить</span>
+        </div>`;
+    }).join('');
+}
+
+function addMember(username) {
+    const c = chats[activeId];
+    if (!c.members) c.members = [currentUsername];
+    if (!c.members.includes(username)) {
+        c.members.push(username);
+        c.messages.push({
+            id: Date.now(), type: 'received',
+            text: `👋 ${username} присоединился к чату`,
+            time: now(), sender: 'system'
+        });
+        renderCipMembers();
+        renderMsgs();
+        saveChats();
+        showToast('✓ ' + username + ' добавлен');
+    }
+    closeOverlay('addMemberOverlay');
+}
+
+function removeMember(username, e) {
+    e.stopPropagation();
+    const c = chats[activeId];
+    c.members = (c.members || [currentUsername]).filter(u => u !== username);
+    c.messages.push({
+        id: Date.now(), type: 'received',
+        text: `${username} покинул чат`,
+        time: now(), sender: 'system'
+    });
+    renderCipMembers();
+    renderMsgs();
+    saveChats();
+    showToast(username + ' удалён');
+}
+
+
+// ── CONTACTS SYSTEM ────────────────────────────────────────
+// Контакты хранятся отдельно от пользователей
+// { username: { nick: 'Мой псевдоним', addedAt: timestamp } }
+
+function getContacts() {
+    return Store.get('void_contacts_' + currentUsername) || {};
+}
+function saveContacts(c) {
+    Store.set('void_contacts_' + currentUsername, c);
+}
+
+function switchContactsTab(n) {
+    [1,2].forEach(i => {
+        document.getElementById('ctab'+i).classList.toggle('active', i===n);
+        document.getElementById('ctabContent'+i).style.display = i===n ? 'block' : 'none';
+    });
+    if (n === 1) renderContactsList();
+    if (n === 2) {
+        searchPeople('');
+        setTimeout(() => document.getElementById('peopleSearchInput').focus(), 100);
+    }
+}
+
+function openContactsModal() {
+    switchContactsTab(1);
+    openOverlay('peopleOverlay');
+}
+
+function renderContactsList() {
+    const contacts = getContacts();
+    const users = getUsers();
+    const list = document.getElementById('contactsList');
+    const keys = Object.keys(contacts);
+
+    if (!keys.length) {
+        list.innerHTML = '<div style="font-size:0.82rem;color:var(--text-3);text-align:center;padding:24px 16px;">У вас пока нет контактов.<br>Найдите людей во вкладке «Найти».</div>';
+        return;
+    }
+
+    list.innerHTML = keys.map(un => {
+        const u = users[un] || { name: un };
+        const ct = contacts[un];
+        const displayName = ct.nick || u.name || un;
+        const isOnline = u.status !== 'offline';
+        const avaHtml = u.avatar
+            ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+            : displayName[0].toUpperCase();
+
+        return `<div class="contact-item">
+            <div class="contact-ava" onclick="openUserProfile('${un}')">
+                ${avaHtml}
+                ${isOnline ? '<div class="contact-online"></div>' : ''}
+            </div>
+            <div class="contact-info" onclick="openUserProfile('${un}')">
+                <div class="contact-name">${displayName}</div>
+                <div class="contact-nick">@${un}${ct.nick ? ' · ' + (u.name||un) : ''}</div>
+            </div>
+            <div class="contact-actions">
+                <button class="contact-act-btn" onclick="startDMFromContact('${un}')" title="Написать">💬</button>
+                <button class="contact-act-btn" onclick="openRenameContact('${un}')" title="Переименовать">✏️</button>
+                <button class="contact-act-btn danger" onclick="removeContact('${un}',event)" title="Удалить">✕</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function addContact(username) {
+    const contacts = getContacts();
+    if (contacts[username]) {
+        showToast('Уже в контактах');
+        return;
+    }
+    contacts[username] = { addedAt: Date.now(), nick: '' };
+    saveContacts(contacts);
+    showToast('✓ Добавлен в контакты');
+    renderContactsList();
+}
+
+function removeContact(username, e) {
+    if (e) e.stopPropagation();
+    const contacts = getContacts();
+    delete contacts[username];
+    saveContacts(contacts);
+    renderContactsList();
+    showToast('Удалён из контактов');
+}
+
+function startDMFromContact(username) {
+    closeOverlay('peopleOverlay');
+    openDM(username);
+}
+
+// Переименование контакта
+let renamingContact = null;
+function openRenameContact(username) {
+    renamingContact = username;
+    const users = getUsers();
+    const contacts = getContacts();
+    const u = users[username] || { name: username };
+    const ct = contacts[username] || {};
+
+    // Аватар
+    const rcAva = document.getElementById('rcAva');
+    if (u.avatar) rcAva.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    else rcAva.textContent = (u.name||username)[0].toUpperCase();
+
+    document.getElementById('rcRealName').textContent = 'Настоящее имя: ' + (u.name || username);
+    document.getElementById('rcTag').textContent = '@' + username;
+    document.getElementById('rcNickInput').value = ct.nick || '';
+    openOverlay('renameContactOverlay');
+}
+
+function saveContactNick() {
+    if (!renamingContact) return;
+    const nick = document.getElementById('rcNickInput').value.trim();
+    const contacts = getContacts();
+    if (!contacts[renamingContact]) contacts[renamingContact] = { addedAt: Date.now() };
+    contacts[renamingContact].nick = nick;
+    saveContacts(contacts);
+    renamingContact = null;
+    closeOverlay('renameContactOverlay');
+    renderContactsList();
+    // Обновить отображение в чатах
+    renderChats();
+    showToast('✓ Имя сохранено');
+}
+
+// Получить отображаемое имя с учётом контакта
+function getDisplayName(username) {
+    const contacts = getContacts();
+    const ct = contacts[username];
+    if (ct && ct.nick) return ct.nick;
+    const users = getUsers();
+    const u = users[username];
+    return u ? (u.name || username) : username;
+}
+
 // ── GLOBAL SEARCH ─────────────────────────────────────────
 function globalSearch(q) {
     filterChats(q);
@@ -2706,11 +3298,13 @@ function formatBirthday(dateStr) {
 function searchPeople(q) {
     const list = document.getElementById('peopleList');
     const users = getUsers();
+    const contacts = getContacts();
     const results = Object.entries(users).filter(([un, u]) =>
         un !== currentUsername && (
             !q.trim() ||
             un.toLowerCase().includes(q.toLowerCase()) ||
-            (u.name||'').toLowerCase().includes(q.toLowerCase())
+            (u.name||'').toLowerCase().includes(q.toLowerCase()) ||
+            ((contacts[un]||{}).nick||'').toLowerCase().includes(q.toLowerCase())
         )
     );
     if (!results.length) {
@@ -2718,16 +3312,29 @@ function searchPeople(q) {
         return;
     }
     list.innerHTML = results.map(([un, u]) => {
+        const ct = contacts[un];
+        const displayName = ct && ct.nick ? ct.nick : (u.name || un);
+        const isContact = !!ct;
+        const isOnline = u.status !== 'offline';
         const avaHtml = u.avatar
             ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-            : (u.name||un)[0].toUpperCase();
+            : displayName[0].toUpperCase();
         return `<div class="people-item">
-            <div class="people-ava" onclick="openUserProfile('${un}')">${avaHtml}</div>
-            <div class="people-info" onclick="openUserProfile('${un}')">
-                <div class="people-name">${u.name || un}</div>
-                <div class="people-tag">@${un}</div>
+            <div class="people-ava" style="position:relative;" onclick="openUserProfile('${un}')">
+                ${avaHtml}
+                ${isOnline ? '<div style="position:absolute;bottom:0;right:0;width:9px;height:9px;background:var(--green);border-radius:50%;border:2px solid var(--surface);"></div>' : ''}
             </div>
-            <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;font-family:'Inter',sans-serif;">ЛС</button>
+            <div class="people-info" onclick="openUserProfile('${un}')">
+                <div class="people-name">${displayName}${isContact ? ' <span style="color:var(--green);font-size:0.65rem;">✓ контакт</span>' : ''}</div>
+                <div class="people-tag">@${un}${ct && ct.nick ? ' · ' + (u.name||un) : ''}</div>
+            </div>
+            <div style="display:flex;gap:5px;">
+                ${isContact
+                    ? `<button onclick="startDMFromContact('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;">💬</button>`
+                    : `<button onclick="addContact('${un}')" style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text-2);font-size:0.75rem;cursor:pointer;" title="Добавить в контакты">+ Контакт</button>
+                       <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;">💬</button>`
+                }
+            </div>
         </div>`;
     }).join('');
 }
@@ -2747,7 +3354,7 @@ function openDM(username) {
 
     const localUsers = getUsers();
     const u = localUsers[username];
-    const displayName = u ? (u.name || username) : username;
+    const displayName = getDisplayName(username) || (u ? (u.name || username) : username);
 
     if (useServer) {
         // Создаём комнату через сервер
