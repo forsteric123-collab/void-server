@@ -411,6 +411,14 @@
         }
         @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+
+        .msg-sender {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--accent);
+            margin-bottom: 3px;
+            padding-left: 2px;
+        }
         .msg.sent { align-self: flex-end; align-items: flex-end; }
         .msg.received { align-self: flex-start; align-items: flex-start; }
 
@@ -1189,15 +1197,37 @@ function connectWS() {
       const m = data.msg;
       const cid = String(m.chat_id);
       if (!chats[cid]) return;
-      // Не дублируем своё же сообщение
-      const exists = chats[cid].messages.find(x => x.id === m.id);
-      if (exists) return;
-      chats[cid].messages.push({
-        id: m.id,
-        text: m.text,
-        type: m.is_sent ? 'sent' : 'received',
-        time: m.time
-      });
+
+      const isMine = m.sender === currentUsername;
+
+      if (isMine) {
+        // Заменяем временное сообщение на подтверждённое с сервера
+        const tmpIdx = chats[cid].messages.findIndex(x => x.id === m.tmpId);
+        if (tmpIdx !== -1) {
+          chats[cid].messages[tmpIdx].id = m.id;
+        } else {
+          // На случай если tmpId не совпал — проверяем дубликат по id
+          const exists = chats[cid].messages.find(x => x.id === m.id);
+          if (!exists) {
+            chats[cid].messages.push({
+              id: m.id, text: m.text,
+              type: 'sent', time: m.time,
+              sender: m.sender
+            });
+          }
+        }
+      } else {
+        // Чужое сообщение — просто добавляем
+        const exists = chats[cid].messages.find(x => x.id === m.id);
+        if (!exists) {
+          chats[cid].messages.push({
+            id: m.id, text: m.text,
+            type: 'received', time: m.time,
+            sender: m.sender
+          });
+        }
+      }
+
       if (cid === activeId) renderMsgs();
       else chats[cid].unread = (chats[cid].unread || 0) + 1;
       chats[cid].updated = Date.now();
@@ -1469,6 +1499,7 @@ function renderMsgs(filter = '') {
                     <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
             </div>
+            ${m.type === 'received' && m.sender ? `<div class="msg-sender">${m.sender}</div>` : ''}
             <div class="msg-bubble">${body}</div>
             ${reactions ? `<div class="reactions">${reactions}</div>` : ''}
             <div class="msg-time">${m.time}${m.edited ? ' · изм.' : ''}</div>
@@ -1489,18 +1520,22 @@ function sendMsg() {
         if (m) { m.text = text; m.edited = true; }
         cancelEdit();
     } else {
-        chats[activeId].messages.push({ id: Date.now(), type: 'sent', text, time: now() });
+        const tmpId = Date.now();
         chats[activeId].updated = Date.now();
         if (useServer && ws && ws.readyState === 1) {
+            // Сервер подключён — добавляем локально сразу, сервер подтвердит через broadcast
+            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), sender: currentUsername });
             ws.send(JSON.stringify({
                 type: 'message',
                 chat_id: Number(activeId),
                 text: text,
                 is_sent: true,
                 time: now(),
-                sender: currentUsername
+                sender: currentUsername,
+                tmpId: tmpId
             }));
         } else {
+            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now() });
             botReply();
         }
     }

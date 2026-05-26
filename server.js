@@ -24,9 +24,15 @@ db.exec(`
     text     TEXT,
     is_sent  INTEGER DEFAULT 0,
     time     TEXT,
+    sender   TEXT DEFAULT 'Аноним',
     created  DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Добавляем колонку sender если её нет (для старых баз)
+try {
+  db.exec(`ALTER TABLE messages ADD COLUMN sender TEXT DEFAULT 'Аноним'`);
+} catch(e) { /* колонка уже есть */ }
 
 // Добавляем тестовый чат если база пустая
 const count = db.prepare('SELECT COUNT(*) as n FROM chats').get();
@@ -36,25 +42,19 @@ if (count.n === 0) {
 }
 
 // ── 4. Раздаём HTML-файл ──────────────────────
-// Положи messenger.html в папку public/index.html
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── 5. API маршруты ───────────────────────────
-// Получить все чаты
 app.get('/api/chats', (req, res) => {
-  const chats = db.prepare('SELECT * FROM chats').all();
-  res.json(chats);
+  res.json(db.prepare('SELECT * FROM chats').all());
 });
 
-// Получить сообщения конкретного чата
 app.get('/api/messages/:chatId', (req, res) => {
-  const msgs = db.prepare(
+  res.json(db.prepare(
     'SELECT * FROM messages WHERE chat_id = ? ORDER BY created'
-  ).all(req.params.chatId);
-  res.json(msgs);
+  ).all(req.params.chatId));
 });
 
-// Создать новый чат
 app.post('/api/chats', (req, res) => {
   const { name, avatar, type } = req.body;
   const info = db.prepare(
@@ -64,8 +64,9 @@ app.post('/api/chats', (req, res) => {
 });
 
 // ── 6. WebSocket + запуск сервера ─────────────
-const server = app.listen(3000, () => {
-  console.log('Сервер запущен: http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
 
 const wss = new WebSocketServer({ server });
@@ -75,21 +76,41 @@ wss.on('connection', (ws) => {
   clients.add(ws);
 
   ws.on('message', (raw) => {
-    const data = JSON.parse(raw);
+    try {
+      const data = JSON.parse(raw);
 
-    if (data.type === 'message') {
-      const info = db.prepare(
-        'INSERT INTO messages (chat_id, text, is_sent, time) VALUES (?, ?, ?, ?)'
-      ).run(data.chat_id, data.text, data.is_sent ? 1 : 0, data.time);
+      if (data.type === 'message') {
+        // Сохраняем в БД с sender
+        const info = db.prepare(
+          'INSERT INTO messages (chat_id, text, is_sent, time, sender) VALUES (?, ?, ?, ?, ?)'
+        ).run(
+          data.chat_id,
+          data.text,
+          data.is_sent ? 1 : 0,
+          data.time,
+          data.sender || 'Аноним'
+        );
 
-      const broadcast = JSON.stringify({
-        type: 'message',
-        msg: { id: info.lastInsertRowid, ...data }
-      });
+        // Рассылаем всем — включаем tmpId чтобы отправитель мог заменить временный id
+        const broadcast = JSON.stringify({
+          type: 'message',
+          msg: {
+            id: info.lastInsertRowid,
+            chat_id: data.chat_id,
+            text: data.text,
+            is_sent: data.is_sent,
+            time: data.time,
+            sender: data.sender || 'Аноним',
+            tmpId: data.tmpId
+          }
+        });
 
-      clients.forEach(c => {
-        if (c.readyState === 1) c.send(broadcast);
-      });
+        clients.forEach(c => {
+          if (c.readyState === 1) c.send(broadcast);
+        });
+      }
+    } catch(e) {
+      console.error('WS error:', e);
     }
   });
 
