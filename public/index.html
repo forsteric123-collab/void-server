@@ -2003,12 +2003,15 @@ function doLogin() {
     const btn = document.getElementById('authSubmitBtn');
     if (btn) { btn.textContent = 'Вход...'; btn.disabled = true; }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: user, password: pass })
+        body: JSON.stringify({ username: user, password: pass }),
+        signal: controller.signal
     })
-    .then(r => r.json())
+    .then(r => { clearTimeout(timeout); return r.json(); })
     .then(data => {
         if (btn) { btn.textContent = 'Войти'; btn.disabled = false; }
         if (data.error) { showAuthError(data.error); return; }
@@ -2019,11 +2022,18 @@ function doLogin() {
         Store.set('void_session', data.user.username);
         enterApp(data.user.username, data.user);
     })
-    .catch(() => {
+    .catch((err) => {
+        console.error('Login error:', err);
         if (btn) { btn.textContent = 'Войти'; btn.disabled = false; }
         const freshUsers = getUsers();
-        if (!freshUsers[user]) { showAuthError('Сервер недоступен и локального аккаунта нет'); return; }
-        if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) { showAuthError('Неверный пароль'); return; }
+        if (!freshUsers[user]) {
+            showAuthError('Не удалось связаться с сервером. Проверьте интернет.');
+            return;
+        }
+        if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) {
+            showAuthError('Неверный пароль');
+            return;
+        }
         Store.set('void_session', user);
         enterApp(user, freshUsers[user]);
     });
