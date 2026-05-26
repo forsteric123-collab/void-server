@@ -697,6 +697,116 @@
         #avatarPreview img { width: 100%; height: 100%; object-fit: cover; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* ── MSG SENDER WITH AVATAR ──────────────────── */
+        .msg-sender-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .msg-sender-ava {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--surface3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px;
+            cursor: pointer;
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: opacity var(--transition);
+        }
+        .msg-sender-ava:hover { opacity: 0.8; }
+        .msg-sender-ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .msg-sender-name {
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: var(--accent);
+            cursor: pointer;
+        }
+        .msg-sender-name:hover { text-decoration: underline; }
+
+        /* ── REPLY ───────────────────────────────────── */
+        .reply-bar {
+            padding: 7px 16px;
+            background: var(--surface2);
+            border-top: 1px solid var(--border);
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        .reply-bar.visible { display: flex; }
+        .reply-line { width: 2px; height: 28px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
+        .reply-content { flex: 1; overflow: hidden; }
+        .reply-author { font-size: 0.72rem; color: var(--accent); font-weight: 500; }
+        .reply-text { font-size: 0.78rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .msg-reply-preview {
+            background: var(--surface3);
+            border-left: 2px solid var(--accent);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin-bottom: 5px;
+            font-size: 0.75rem;
+            color: var(--text-2);
+            cursor: pointer;
+        }
+        .msg-reply-preview .rp-author { color: var(--accent); font-weight: 500; margin-bottom: 1px; }
+
+        /* ── USER PROFILE MODAL ──────────────────────── */
+        .user-profile-ava {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: var(--surface3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem;
+            margin: 0 auto 12px;
+            overflow: hidden;
+        }
+        .user-profile-ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .user-profile-name { text-align: center; font-size: 1rem; font-weight: 500; margin-bottom: 3px; }
+        .user-profile-tag { text-align: center; font-size: 0.78rem; color: var(--text-2); font-family: 'DM Mono', monospace; }
+
+        /* ── PEOPLE SEARCH ───────────────────────────── */
+        .people-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-height: 260px; overflow-y: auto; }
+        .people-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .people-item:hover { border-color: var(--accent); background: var(--accent-dim); }
+        .people-ava {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--surface3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0; overflow: hidden;
+        }
+        .people-ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .people-info { flex: 1; }
+        .people-name { font-size: 0.88rem; font-weight: 500; }
+        .people-tag { font-size: 0.72rem; color: var(--text-2); font-family: 'DM Mono', monospace; }
+
+        /* ── REACTIONS PICKER ────────────────────────── */
+        .react-picker {
+            position: absolute;
+            top: -44px;
+            background: var(--surface3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 5px 8px;
+            display: none;
+            gap: 4px;
+            z-index: 10;
+            white-space: nowrap;
+        }
+        .msg.sent .react-picker { right: 0; }
+        .msg.received .react-picker { left: 0; }
+        .react-picker.open { display: flex; }
+        .react-opt { font-size: 1.1rem; cursor: pointer; padding: 2px 3px; border-radius: 4px; transition: transform 0.1s; }
+        .react-opt:hover { transform: scale(1.3); }
+
         /* ── WALLPAPER ───────────────────────────────── */
         .messages-area.has-wallpaper {
             background-attachment: local;
@@ -982,6 +1092,40 @@
 
 
 
+
+    <!-- User profile view modal -->
+    <div class="overlay" id="userProfileOverlay">
+        <div class="modal" style="max-width:300px;">
+            <div class="modal-head">
+                Профиль
+                <button class="modal-close" onclick="closeOverlay('userProfileOverlay')">✕</button>
+            </div>
+            <div class="user-profile-ava" id="upAva">👤</div>
+            <div class="user-profile-name" id="upName"></div>
+            <div class="user-profile-tag" id="upTag"></div>
+            <div style="height:16px;"></div>
+            <button class="primary-btn" onclick="closeOverlay('userProfileOverlay')">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- People search modal -->
+    <div class="overlay" id="peopleOverlay">
+        <div class="modal">
+            <div class="modal-head">
+                Поиск людей
+                <button class="modal-close" onclick="closeOverlay('peopleOverlay')">✕</button>
+            </div>
+            <div class="field">
+                <label>Юзернейм</label>
+                <input type="text" id="peopleSearchInput" placeholder="Введите @username..." oninput="searchPeople(this.value)">
+            </div>
+            <div class="people-list" id="peopleList">
+                <div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">Начните вводить юзернейм</div>
+            </div>
+            <button class="ghost-btn" onclick="closeOverlay('peopleOverlay')">Закрыть</button>
+        </div>
+    </div>
+
     <!-- Wallpaper modal -->
     <div class="overlay" id="wallpaperOverlay">
         <div class="modal" style="max-width:380px;">
@@ -1032,6 +1176,9 @@
             <div style="display:flex;gap:4px;">
                 <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Тема">
                     <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+                </button>
+                <button class="icon-btn" onclick="openOverlay('peopleOverlay')" title="Поиск людей">
+                    <svg width="15" height="15" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                 </button>
                 <button class="icon-btn" onclick="openLangModal()" title="Язык">
                     <svg id="langIcon" width="15" height="15" viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
@@ -1117,6 +1264,16 @@
                 </button>
             </div>
 
+            <div class="reply-bar" id="replyBar">
+                <div class="reply-line"></div>
+                <div class="reply-content">
+                    <div class="reply-author" id="replyAuthor"></div>
+                    <div class="reply-text" id="replyText"></div>
+                </div>
+                <button class="icon-btn" onclick="cancelReply()" style="width:24px;height:24px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
             <div class="quick-replies" id="quickReplies"></div>
             <div class="input-bar">
                 <label class="attach-lbl" title="Прикрепить">
@@ -1223,13 +1380,16 @@ function connectWS() {
           chats[cid].messages.push({
             id: m.id, text: m.text,
             type: 'received', time: m.time,
-            sender: m.sender
+            sender: m.sender, replyTo: m.replyTo || null
           });
         }
       }
 
-      if (cid === activeId) renderMsgs();
-      else chats[cid].unread = (chats[cid].unread || 0) + 1;
+      if (cid === activeId) {
+        renderMsgs(); // re-render only affected chat
+      } else {
+        chats[cid].unread = (chats[cid].unread || 0) + 1;
+      }
       chats[cid].updated = Date.now();
       renderChats();
     }
@@ -1339,6 +1499,7 @@ function logout() {
 let chats = {};
 let activeId = null;
 let editingId = null;
+let replyingTo = null;
 let tempAva = null;
 let currentUsername = null;
 
@@ -1499,14 +1660,14 @@ function renderMsgs(filter = '') {
                     <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
             </div>
-            ${m.type === 'received' && m.sender ? `<div class="msg-sender">${m.sender}</div>` : ''}
+
             <div class="msg-bubble">${body}</div>
             ${reactions ? `<div class="reactions">${reactions}</div>` : ''}
             <div class="msg-time">${m.time}${m.edited ? ' · изм.' : ''}</div>
         `;
         area.appendChild(div);
     });
-    setTimeout(() => { area.scrollTop = area.scrollHeight; }, 40);
+    requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
 }
 function filterMsgs() { renderMsgs(document.getElementById('msgSearch').value.toLowerCase()); }
 
@@ -1524,7 +1685,7 @@ function sendMsg() {
         chats[activeId].updated = Date.now();
         if (useServer && ws && ws.readyState === 1) {
             // Сервер подключён — добавляем локально сразу, сервер подтвердит через broadcast
-            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), sender: currentUsername });
+            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), sender: currentUsername, replyTo: replyingTo });
             ws.send(JSON.stringify({
                 type: 'message',
                 chat_id: Number(activeId),
@@ -1532,12 +1693,14 @@ function sendMsg() {
                 is_sent: true,
                 time: now(),
                 sender: currentUsername,
-                tmpId: tmpId
+                tmpId: tmpId,
+                replyTo: replyingTo
             }));
         } else {
-            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now() });
+            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), replyTo: replyingTo });
             botReply();
         }
+        cancelReply();
     }
     input.value = '';
     renderMsgs();
@@ -1963,6 +2126,84 @@ function applyTranslations() {
     if (lmt) lmt.childNodes[0].textContent = T('langModalTitle') + ' ';
     // Auth page
 
+}
+
+
+// ── REPLY ─────────────────────────────────────────────────
+function replyTo(id) {
+    const m = chats[activeId].messages.find(x => x.id === id);
+    if (!m) return;
+    replyingTo = { id: m.id, text: m.text || '📎 Изображение', sender: m.sender || currentUsername };
+    document.getElementById('replyBar').classList.add('visible');
+    document.getElementById('replyAuthor').textContent = replyingTo.sender;
+    document.getElementById('replyText').textContent = replyingTo.text;
+    document.getElementById('msgInput').focus();
+}
+function cancelReply() {
+    replyingTo = null;
+    document.getElementById('replyBar').classList.remove('visible');
+}
+
+// ── REACTION PICKER ────────────────────────────────────────
+function togglePicker(id, e) {
+    e.stopPropagation();
+    const el = document.getElementById('rp_' + id);
+    const isOpen = el.classList.contains('open');
+    closeAllPickers();
+    if (!isOpen) el.classList.add('open');
+}
+function closeAllPickers() {
+    document.querySelectorAll('.react-picker').forEach(p => p.classList.remove('open'));
+}
+document.addEventListener('click', closeAllPickers);
+
+// ── SCROLL TO MSG ──────────────────────────────────────────
+function scrollToMsg(id) {
+    const el = document.querySelector(`.msg[data-id="${id}"]`);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.background='var(--accent-dim)'; setTimeout(()=>el.style.background='',1200); }
+}
+
+// ── USER PROFILE ───────────────────────────────────────────
+function openUserProfile(username) {
+    const users = getUsers();
+    const u = users[username];
+    if (!u) return;
+    const ava = document.getElementById('upAva');
+    if (u.avatar) ava.innerHTML = `<img src="${u.avatar}">`;
+    else ava.textContent = (u.name||username)[0].toUpperCase();
+    document.getElementById('upName').textContent = u.name || username;
+    document.getElementById('upTag').textContent = '@' + username;
+    openOverlay('userProfileOverlay');
+}
+
+// ── PEOPLE SEARCH ──────────────────────────────────────────
+function searchPeople(q) {
+    const list = document.getElementById('peopleList');
+    const users = getUsers();
+    const results = Object.entries(users).filter(([un, u]) =>
+        un !== currentUsername && (
+            un.toLowerCase().includes(q.toLowerCase()) ||
+            (u.name||'').toLowerCase().includes(q.toLowerCase())
+        )
+    );
+    if (!q.trim()) {
+        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">Начните вводить юзернейм</div>';
+        return;
+    }
+    if (!results.length) {
+        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">Никого не найдено</div>';
+        return;
+    }
+    list.innerHTML = results.map(([un, u]) => {
+        const avaHtml = u.avatar ? `<img src="${u.avatar}">` : (u.name||un)[0].toUpperCase();
+        return `<div class="people-item" onclick="openUserProfile('${un}')">
+            <div class="people-ava">${avaHtml}</div>
+            <div class="people-info">
+                <div class="people-name">${u.name || un}</div>
+                <div class="people-tag">@${un}</div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 // ── CHAR COUNTER ─────────────────────────────────────────
