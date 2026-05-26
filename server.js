@@ -167,6 +167,23 @@ app.get('/api/messages/:roomKey', (req, res) => {
   ).all(chat.id).reverse());
 });
 
+// Получить все ЛС чаты пользователя
+app.get('/api/my-dms', (req, res) => {
+  const username = req.query.username;
+  if (!username) return res.json([]);
+  // Ищем все комнаты где есть этот юзер в room_key
+  const dms = db.prepare(
+    "SELECT * FROM chats WHERE type = 'ЛС' AND room_key LIKE ?"
+  ).all('%' + username + '%');
+  // Фильтруем точнее — юзер должен быть в dm_user1_user2
+  const filtered = dms.filter(c => {
+    if (!c.room_key) return false;
+    const parts = c.room_key.replace('dm_', '').split('_');
+    return parts.includes(username);
+  });
+  res.json(filtered);
+});
+
 app.post('/api/dm', (req, res) => {
   const { user1, user2 } = req.body;
   if (!user1 || !user2) return res.status(400).json({ error: 'нужны user1 и user2' });

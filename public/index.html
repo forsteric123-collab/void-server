@@ -1719,7 +1719,7 @@
                         <div class="chat-header-name" id="hdrName"></div>
                         <div style="display:flex;align-items:center;gap:6px;">
                             <div class="chat-header-sub" id="hdrSub"></div>
-                            <span class="e2e-badge pending" id="e2eBadge" title="Сквозное шифрование">🔒 E2E</span>
+                
                         </div>
                     </div>
                 </div>
@@ -1792,6 +1792,41 @@
 let ws;
 let useServer = false; // переключим в true когда сервер ответит
 
+
+// Загрузить все ЛС комнаты где участвует текущий пользователь
+function loadMyDMs() {
+    fetch('/api/my-dms?username=' + currentUsername)
+        .then(r => r.json())
+        .then(dms => {
+            dms.forEach(chat => {
+                const cid = 'dm_' + chat.id;
+                if (!chats[cid]) {
+                    // Определяем собеседника из room_key
+                    const parts = (chat.room_key || '').replace('dm_','').split('_');
+                    const dmWith = parts.find(p => p !== currentUsername) || '';
+                    const localUsers = getUsers();
+                    const u = localUsers[dmWith];
+                    const contacts = getContacts();
+                    const ct = contacts[dmWith];
+                    const displayName = (ct && ct.nick) || (u ? u.name : dmWith) || dmWith;
+                    chats[cid] = {
+                        name: displayName,
+                        avatar: u && u.avatar ? '' : (displayName ? displayName[0].toUpperCase() : '?'),
+                        avatarImg: u && u.avatar ? u.avatar : null,
+                        type: 'ЛС',
+                        unread: 0, updated: Date.now(), pinned: null,
+                        messages: [],
+                        roomKey: chat.room_key,
+                        dmWith: dmWith,
+                        isServer: true
+                    };
+                }
+            });
+            renderChats();
+        })
+        .catch(() => {});
+}
+
 // currentRoomKey — ключ комнаты в которой сейчас находимся
 let currentRoomKey = null;
 
@@ -1820,8 +1855,11 @@ function connectToServer() {
         }
       });
 
-      connectWS();
+        connectWS();
       renderChats();
+
+      // Загрузить все ЛС чаты текущего пользователя с сервера
+      loadMyDMs();
 
       // Переключаемся на первый серверный чат
       const firstSrv = Object.keys(chats).find(id => chats[id].isServer);
@@ -2373,34 +2411,16 @@ function sendMsg() {
             const isDM = chats[activeId]?.type === 'ЛС';
             const dmPartner = chats[activeId]?.dmWith;
 
-            if (isDM && dmPartner && e2eReady) {
-                // ЛС — шифруем
-                encryptMessage(text, dmPartner).then(({ text: encText, encrypted }) => {
-                    ws.send(JSON.stringify({
-                        type: 'message',
-                        roomKey: activeRoomKey,
-                        text: encText,
-                        is_sent: true,
-                        time: now(),
-                        sender: currentUsername,
-                        tmpId: tmpId,
-                        replyTo: replyingTo,
-                        e2e: encrypted
-                    }));
-                });
-            } else {
-                ws.send(JSON.stringify({
-                    type: 'message',
-                    roomKey: activeRoomKey,
-                    chat_id: activeRoomKey ? undefined : Number(activeId),
-                    text: text,
-                    is_sent: true,
-                    time: now(),
-                    sender: currentUsername,
-                    tmpId: tmpId,
-                    replyTo: replyingTo
-                }));
-            }
+            ws.send(JSON.stringify({
+                type: 'message',
+                roomKey: activeRoomKey,
+                text: text,
+                is_sent: true,
+                time: now(),
+                sender: currentUsername,
+                tmpId: tmpId,
+                replyTo: replyingTo
+            }));
         } else {
             chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), replyTo: replyingTo });
             botReply();
@@ -3960,7 +3980,28 @@ function updateCharCounter(input) {}
 // ── COPY MESSAGE ─────────────────────────────────────────
 function copyMsg(text) {
     if (!text) return;
-    navigator.clipboard.writeText(text).then(() => showToast('✓ Скопировано'));
+    // Современный способ
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+            .then(() => showToast('✓ Скопировано'))
+            .catch(() => copyFallback(text));
+    } else {
+        copyFallback(text);
+    }
+}
+function copyFallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try {
+        document.execCommand('copy');
+        showToast('✓ Скопировано');
+    } catch(e) {
+        showToast('Не удалось скопировать');
+    }
+    document.body.removeChild(ta);
 }
 
 // ── TOAST ────────────────────────────────────────────────
