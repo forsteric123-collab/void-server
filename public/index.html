@@ -255,6 +255,7 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 1rem;
             flex-shrink: 0;
+            overflow: hidden;
         }
         .chat-item.active .chat-ava {
             background: var(--accent-dim);
@@ -366,6 +367,8 @@
             background: var(--surface3);
             display: flex; align-items: center; justify-content: center;
             font-size: 0.95rem;
+            overflow: hidden;
+            flex-shrink: 0;
         }
         .chat-header-name { font-size: 0.95rem; font-weight: 500; }
         .chat-header-sub { font-size: 0.72rem; color: var(--text-2); margin-top: 1px; }
@@ -843,6 +846,83 @@
 
 
 
+
+        /* ── ROLES & ADMIN ───────────────────────────── */
+        .role-badge {
+            font-size: 0.62rem; padding: 1px 6px;
+            border-radius: 10px; font-weight: 600;
+            letter-spacing: 0.3px; flex-shrink: 0;
+        }
+        .role-owner  { background: rgba(245,159,0,0.15); color: #f59f00; border: 1px solid rgba(245,159,0,0.3); }
+        .role-admin  { background: rgba(107,138,253,0.15); color: var(--accent); border: 1px solid rgba(107,138,253,0.3); }
+        .role-member { background: var(--surface3); color: var(--text-3); border: 1px solid var(--border); }
+        .member-actions-row {
+            display: flex; gap: 4px; align-items: center;
+        }
+        .ma-btn {
+            width: 24px; height: 24px; border-radius: 5px;
+            background: transparent; border: none; cursor: pointer;
+            color: var(--text-3); font-size: 0.75rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all var(--transition);
+        }
+        .ma-btn:hover { background: var(--surface3); color: var(--text); }
+        .ma-btn.danger:hover { color: var(--danger); }
+        .admin-section {
+            margin: 0 12px 10px;
+            background: rgba(245,159,0,0.05);
+            border: 1px solid rgba(245,159,0,0.15);
+            border-radius: 10px; padding: 10px 12px;
+        }
+        .admin-section-title {
+            font-size: 0.7rem; color: #f59f00;
+            font-weight: 600; margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .admin-toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 5px 0; font-size: 0.82rem; color: var(--text-2);
+        }
+        .toggle-switch {
+            width: 34px; height: 18px;
+            background: var(--surface3); border-radius: 9px;
+            position: relative; cursor: pointer;
+            transition: background var(--transition); flex-shrink: 0;
+        }
+        .toggle-switch.on { background: var(--accent); }
+        .toggle-switch::after {
+            content: ''; position: absolute;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: white; top: 3px; left: 3px;
+            transition: left var(--transition);
+        }
+        .toggle-switch.on::after { left: 19px; }
+        .danger-zone {
+            margin: 8px 12px 16px;
+            border: 1px solid rgba(240,80,80,0.2);
+            border-radius: 10px; padding: 10px 12px;
+        }
+        .danger-zone-title {
+            font-size: 0.7rem; color: var(--danger);
+            font-weight: 600; margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .danger-btn {
+            width: 100%; padding: 8px;
+            background: transparent;
+            border: 1px solid rgba(240,80,80,0.3);
+            border-radius: 8px; color: var(--danger);
+            font-family: 'Inter', sans-serif; font-size: 0.82rem;
+            cursor: pointer; margin-bottom: 6px;
+            transition: all var(--transition);
+        }
+        .danger-btn:hover { background: rgba(240,80,80,0.08); }
+        .cip-role-select {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.78rem;
+            padding: 3px 6px; outline: none; cursor: pointer;
+        }
         /* ── CONTACTS ────────────────────────────────── */
         .contacts-tabs {
             display: flex; gap: 0;
@@ -1081,6 +1161,24 @@
         .lang-check { margin-left: auto; color: var(--accent); display: none; }
         .lang-item.sel .lang-check { display: block; }
 
+
+        .search-filter-chip {
+            font-size: 0.72rem; padding: 4px 10px;
+            border-radius: 14px; cursor: pointer;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            transition: all var(--transition);
+            user-select: none; white-space: nowrap;
+        }
+        .search-filter-chip.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .people-item { border-radius: var(--radius-sm); transition: background var(--transition); }
+        .people-item:hover { background: var(--surface2); }
+        .search-highlight { background: rgba(107,138,253,0.2); border-radius: 2px; }
         /* ── CHAR COUNTER ─────────────────────────── */
         .char-counter {
             font-size: 0.68rem;
@@ -1191,6 +1289,9 @@
                 <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
             </div>
             <button class="auth-btn" onclick="doLogin()">Войти</button>
+            <div style="text-align:center;margin-top:10px;">
+                <button onclick="resetAllData()" style="background:none;border:none;font-size:0.72rem;color:var(--text-3);cursor:pointer;font-family:'Inter',sans-serif;" title="Сбросить все данные (для разработки)">Сбросить все данные</button>
+            </div>
         </div>
 
         <!-- REGISTER -->
@@ -1266,6 +1367,7 @@
                     <textarea id="pBio" placeholder="Расскажи о себе..." rows="3" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:vertical;width:100%;box-sizing:border-box;transition:border-color var(--transition);" onfocus="this.style.borderColor='rgba(107,138,253,0.5)'" onblur="this.style.borderColor=''"></textarea>
                 </div>
                 <div class="field"><label>Дата рождения</label><input type="date" id="pBirthday"></div>
+                <div class="field"><label>Номер телефона</label><input type="tel" id="pPhone" placeholder="+7 999 123 45 67"></div>
                 <div class="field"><label>Город</label><input type="text" id="pCity" placeholder="Москва"></div>
                 <div class="field"><label>Сайт / ссылка</label><input type="text" id="pWebsite" placeholder="https://..."></div>
                 <div class="field"><label>Профессия</label><input type="text" id="pJob" placeholder="Разработчик, дизайнер..."></div>
@@ -1388,12 +1490,20 @@
 
             <!-- Таб 2: Поиск -->
             <div id="ctabContent2" style="display:none;">
-                <div class="field" style="margin-bottom:10px;">
-                    <input type="text" id="peopleSearchInput" placeholder="Имя или @юзернейм..."
+                <div style="position:relative;margin-bottom:12px;">
+                    <input type="text" id="peopleSearchInput" placeholder="Имя, @юзернейм или телефон..."
                         oninput="searchPeople(this.value)"
-                        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;width:100%;box-sizing:border-box;">
+                        autocomplete="off" autocorrect="off" spellcheck="false"
+                        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px 9px 36px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;width:100%;box-sizing:border-box;transition:border-color 0.18s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" style="fill:var(--text-3);position:absolute;left:11px;top:50%;transform:translateY(-50%);"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                 </div>
-                <div class="people-list" id="peopleList" style="max-height:280px;overflow-y:auto;"></div>
+                <div id="searchFilters" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+                    <span class="search-filter-chip active" id="sf_all" onclick="setSearchFilter('all')">Все</span>
+                    <span class="search-filter-chip" id="sf_online" onclick="setSearchFilter('online')">🟢 Онлайн</span>
+                    <span class="search-filter-chip" id="sf_contacts" onclick="setSearchFilter('contacts')">✓ Контакты</span>
+                </div>
+                <div id="searchStats" style="font-size:0.72rem;color:var(--text-3);margin-bottom:8px;padding:0 2px;"></div>
+                <div class="people-list" id="peopleList" style="max-height:260px;overflow-y:auto;"></div>
             </div>
         </div>
     </div>
@@ -1458,7 +1568,36 @@
                 Добавить участника
             </div>
 
-            <button class="cip-save-btn" onclick="saveChatInfo()">Сохранить</button>
+            <!-- Настройки (только для владельца/админа) -->
+            <div id="cipAdminSection" style="display:none;">
+                <div class="cip-section">⚙️ Настройки чата</div>
+                <div class="admin-section">
+                    <div class="admin-section-title">Разрешения</div>
+                    <div class="admin-toggle-row">
+                        <span>Все могут писать</span>
+                        <div class="toggle-switch on" id="toggleWrite" onclick="toggleChatPerm('write')"></div>
+                    </div>
+                    <div class="admin-toggle-row">
+                        <span>Все могут добавлять</span>
+                        <div class="toggle-switch on" id="toggleInvite" onclick="toggleChatPerm('invite')"></div>
+                    </div>
+                    <div class="admin-toggle-row">
+                        <span>Только читение (канал)</span>
+                        <div class="toggle-switch" id="toggleReadonly" onclick="toggleChatPerm('readonly')"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Опасная зона (только владелец) -->
+            <div id="cipDangerZone" style="display:none;">
+                <div class="danger-zone">
+                    <div class="danger-zone-title">⚠️ Опасная зона</div>
+                    <button class="danger-btn" onclick="clearHistory()">🗑 Очистить историю</button>
+                    <button class="danger-btn" onclick="deleteChat()">✕ Удалить чат</button>
+                </div>
+            </div>
+
+            <button class="cip-save-btn" id="cipSaveBtn" onclick="saveChatInfo()">Сохранить</button>
         </div>
     </div>
 
@@ -1638,7 +1777,7 @@
                     <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-3.31 2.69-6 6-6s6 2.69 6 6v10.5c0 4.42-3.58 8-8 8s-8-3.58-8-8V6h2v10.5c0 3.31 2.69 6 6 6s6-2.69 6-6V5c0-2.21-1.79-4-4-4s-4 1.79-4 4v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
                     <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="attachFile(this)">
                 </label>
-                <input type="text" class="msg-input" id="msgInput" placeholder="Сообщение…" autocomplete="off" oninput="updateCharCounter(this)" >
+                <input type="text" class="msg-input" id="msgInput" placeholder="Сообщение…" autocomplete="off" >
                 
                 <button class="send-btn" onclick="sendMsg()">
                     <svg viewBox="0 0 24 24"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/></svg>
@@ -1822,11 +1961,35 @@ function doLogin() {
     const user = document.getElementById('loginUser').value.trim().toLowerCase();
     const pass = document.getElementById('loginPass').value;
     if (!user || !pass) return showAuthError('Заполните все поля');
-    const freshUsers = getUsers();
-    if (!freshUsers[user]) return showAuthError('Пользователь не найден');
-    if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) return showAuthError('Неверный пароль');
-    Store.set('void_session', user);
-    enterApp(user, freshUsers[user]);
+
+    const btn = document.getElementById('authSubmitBtn');
+    btn.textContent = 'Вход...'; btn.disabled = true;
+
+    fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { showAuthError(data.error); btn.textContent = 'Войти'; btn.disabled = false; return; }
+        // Сохранить в localStorage для офлайн доступа
+        const users = getUsers();
+        users[data.user.username] = { ...data.user, password: btoa(unescape(encodeURIComponent(pass))) };
+        saveUsers(users);
+        Store.set('void_session', data.user.username);
+        btn.textContent = 'Войти'; btn.disabled = false;
+        enterApp(data.user.username, data.user);
+    })
+    .catch(() => {
+        // Сервер недоступен — пробуем локально
+        const freshUsers = getUsers();
+        if (!freshUsers[user]) { showAuthError('Сервер недоступен и локального аккаунта нет'); btn.textContent = 'Войти'; btn.disabled = false; return; }
+        if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) { showAuthError('Неверный пароль'); btn.textContent = 'Войти'; btn.disabled = false; return; }
+        Store.set('void_session', user);
+        btn.textContent = 'Войти'; btn.disabled = false;
+        enterApp(user, freshUsers[user]);
+    });
 }
 
 function doRegister() {
@@ -1839,13 +2002,35 @@ function doRegister() {
     if (pass.length < 6) return showAuthError('Пароль минимум 6 символов');
     if (pass !== pass2) return showAuthError('Пароли не совпадают');
     if (!/^[a-zа-я0-9_]+$/i.test(user)) return showAuthError('Только буквы, цифры и _');
-    // Всегда читаем свежие данные из хранилища
-    const freshUsers = getUsers();
-    if (freshUsers[user]) return showAuthError('Имя пользователя занято');
-    freshUsers[user] = { name, password: btoa(unescape(encodeURIComponent(pass))), status: 'online', accent: '#6b8afd' };
-    saveUsers(freshUsers);
-    Store.set('void_session', user);
-    enterApp(user, freshUsers[user]);
+
+    const btn = document.getElementById('authSubmitBtn');
+    btn.textContent = 'Создание...'; btn.disabled = true;
+
+    fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, name, password: pass })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { showAuthError(data.error); btn.textContent = 'Создать аккаунт'; btn.disabled = false; return; }
+        const users = getUsers();
+        users[user] = { ...data.user, password: btoa(unescape(encodeURIComponent(pass))) };
+        saveUsers(users);
+        Store.set('void_session', user);
+        btn.textContent = 'Создать аккаунт'; btn.disabled = false;
+        enterApp(user, data.user);
+    })
+    .catch(() => {
+        // Офлайн режим
+        const freshUsers = getUsers();
+        if (freshUsers[user]) { showAuthError('Имя занято'); btn.textContent = 'Создать аккаунт'; btn.disabled = false; return; }
+        freshUsers[user] = { name, password: btoa(unescape(encodeURIComponent(pass))), status: 'online', accent: '#6b8afd' };
+        saveUsers(freshUsers);
+        Store.set('void_session', user);
+        btn.textContent = 'Создать аккаунт'; btn.disabled = false;
+        enterApp(user, freshUsers[user]);
+    });
 }
 
 function enterApp(username, userData) {
@@ -1858,7 +2043,25 @@ function enterApp(username, userData) {
 }
 
 function logout() {
+    if (currentUsername) {
+        fetch('/api/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUsername })
+        }).catch(() => {});
+    }
     Store.del('void_session');
+    location.reload();
+}
+
+function resetAllData() {
+    if (!confirm('Сбросить ВСЕ данные? Все пользователи и чаты будут удалены.')) return;
+    try {
+        localStorage.clear();
+    } catch(e) {
+        // fallback — удаляем по ключам
+        for (const k in _mem) delete _mem[k];
+    }
     location.reload();
 }
 
@@ -1874,22 +2077,51 @@ let replyingTo = null;
 let tempAva = null;
 let currentUsername = null;
 
+
+function updateUserBarAvatar(userData) {
+    const ae = document.getElementById('userAvaEl');
+    if (userData && userData.avatar) {
+        ae.innerHTML = `<img src="${userData.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+        const name = userData ? (userData.name || currentUsername || '?') : '?';
+        ae.innerHTML = `<span style="font-size:0.9rem;font-weight:600;">${name[0].toUpperCase()}</span>`;
+    }
+}
+
 function initApp(username, userData) {
     currentUsername = username;
     initE2E(username); // запускаем E2E в фоне
     const key = `void_chats_${username}`;
-    chats = Store.get(key) || {
-        '1': { name: 'Избранное', avatar: '🌟', type: 'Заметки', isSystem: true, unread: 0, updated: Date.now(), pinned: null,
-               messages: [{ id: 1, type: 'received', text: 'Привет! Это твоё личное пространство для заметок.', time: now() }] },
-        '2': { name: 'Основной чат', avatar: '💬', type: 'Чат', unread: 1, updated: Date.now() - 1000, pinned: null,
-               messages: [{ id: 2, type: 'received', text: 'Добро пожаловать в void. Начни переписку.', time: now() }] }
-    };
+    const savedChats = Store.get(key);
+    if (savedChats) {
+        chats = savedChats;
+    } else {
+        // Генерируем уникальные id для каждого пользователя
+        const favId = String(Date.now());
+        const mainId = String(Date.now() + 1);
+        chats = {
+            [favId]: {
+                name: 'Избранное', avatar: '🌟', type: 'Заметки',
+                isSystem: true, unread: 0, updated: Date.now(), pinned: null,
+                messages: [{ id: Date.now(), type: 'received',
+                    text: 'Привет, ' + userData.name + '! Это твоё личное пространство для заметок.',
+                    time: now() }]
+            },
+            [mainId]: {
+                name: 'Личный чат', avatar: '💬', type: 'Чат',
+                unread: 0, updated: Date.now() - 1, pinned: null,
+                messages: []
+            }
+        };
+    }
 
     // Update user bar
     document.getElementById('userNameEl').textContent = userData.name;
     document.getElementById('userTagEl').textContent = '@' + username;
     applyAccent(userData.accent || '#6b8afd');
     if (userData.status === 'offline') document.getElementById('statusRing').classList.add('offline');
+    // Загрузить аватарку пользователя
+    updateUserBarAvatar(userData);
 
     // ensure keys are strings
     const fixedChats = {};
@@ -1935,8 +2167,24 @@ function renderChats(filter = '') {
         const preview = last ? (last.isFile ? '📎 Изображение' : last.text) : 'Нет сообщений';
         const div = document.createElement('div');
         div.className = 'chat-item' + (id == activeId ? ' active' : '');
+        // Строим аватарку — картинка или эмодзи/буква
+        let avaContent;
+        if (c.avatarImg) {
+            avaContent = `<img src="${c.avatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        } else if (c.type === 'ЛС' && c.dmWith) {
+            // Для ЛС — показываем аватарку собеседника
+            const users = getUsers();
+            const dmUser = users[c.dmWith];
+            if (dmUser && dmUser.avatar) {
+                avaContent = `<img src="${dmUser.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            } else {
+                avaContent = c.avatar || (c.name ? c.name[0].toUpperCase() : '?');
+            }
+        } else {
+            avaContent = c.avatar || '💬';
+        }
         div.innerHTML = `
-            <div class="chat-ava">${c.avatar}</div>
+            <div class="chat-ava">${avaContent}</div>
             <div class="chat-body">
                 <div class="chat-name">${c.name}</div>
                 <div class="chat-preview">${preview}</div>
@@ -1973,7 +2221,21 @@ function switchChat(id) {
     const cv = document.getElementById('chatView');
     cv.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;';
 
-    document.getElementById('hdrAva').textContent = c.avatar;
+    // Аватарка в шапке чата
+    const hdrAvaEl = document.getElementById('hdrAva');
+    if (c.avatarImg) {
+        hdrAvaEl.innerHTML = `<img src="${c.avatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else if (c.type === 'ЛС' && c.dmWith) {
+        const users = getUsers();
+        const dmUser = users[c.dmWith];
+        if (dmUser && dmUser.avatar) {
+            hdrAvaEl.innerHTML = `<img src="${dmUser.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        } else {
+            hdrAvaEl.textContent = c.avatar || (c.name ? c.name[0] : '?');
+        }
+    } else {
+        hdrAvaEl.textContent = c.avatar || '💬';
+    }
     document.getElementById('hdrName').textContent = c.name;
     document.getElementById('hdrSub').textContent = c.type;
     const badge = document.getElementById('e2eBadge');
@@ -2092,6 +2354,11 @@ function sendMsg() {
     const input = document.getElementById('msgInput');
     const text = input.value.trim();
     if (!text) return;
+    // Проверяем права на отправку
+    if (!canWrite(activeId)) {
+        showToast('🔒 В этом чате можно только читать');
+        return;
+    }
 
     if (editingId !== null) {
         const m = chats[activeId].messages.find(x => x.id === editingId);
@@ -2139,8 +2406,8 @@ function sendMsg() {
             chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), replyTo: replyingTo });
             botReply();
         }
-        cancelReply();
     }
+    cancelReply();
     input.value = '';
     renderMsgs();
     renderChats();
@@ -2237,8 +2504,12 @@ function createChat() {
         unread: 0, updated: Date.now(), pinned: null,
         desc: '',
         owner: currentUsername,
+        admins: [],
         members: [currentUsername],
-        messages: [{ id: Date.now(), type: 'received', text: `Пространство "${name}" создано.`, time: now() }]
+        perms: { write: true, invite: true, readonly: false },
+        messages: [{ id: Date.now(), type: 'received',
+            text: `👑 ${currentUsername} создал${document.getElementById('newType').value === 'Канал' ? ' канал' : ' чат'} «${name}»`,
+            time: now(), sender: 'system' }]
     };
     document.getElementById('newName').value = '';
     closeOverlay('createOverlay');
@@ -2300,6 +2571,7 @@ function openProfileModal() {
     document.getElementById('pStatusMsg').value = u.statusMsg || '';
     document.getElementById('pBio').value = u.bio || '';
     document.getElementById('pBirthday').value = u.birthday || '';
+    document.getElementById('pPhone').value = u.phone || '';
     document.getElementById('pCity').value = u.city || '';
     document.getElementById('pWebsite').value = u.website || '';
     document.getElementById('pJob').value = u.job || '';
@@ -2329,6 +2601,7 @@ function saveProfile() {
     u.statusMsg = document.getElementById('pStatusMsg').value.trim();
     u.bio = document.getElementById('pBio').value.trim();
     u.birthday = document.getElementById('pBirthday').value;
+    u.phone = document.getElementById('pPhone').value.trim();
     u.city = document.getElementById('pCity').value.trim();
     u.website = document.getElementById('pWebsite').value.trim();
     u.job = document.getElementById('pJob').value.trim();
@@ -2357,14 +2630,23 @@ function saveProfile() {
     }
     if (tempAva) {
         u.avatar = tempAva;
-        const ae = document.getElementById('userAvaEl');
-        ae.innerHTML = `<img src="${tempAva}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        updateUserBarAvatar(u);
         tempAva = null;
     }
     document.getElementById('userNameEl').textContent = u.name;
     const ring = document.getElementById('statusRing');
     if (ring) ring.classList.toggle('offline', u.status === 'offline');
     saveUsers(users);
+
+    // Синхронизировать с сервером
+    fetch('/api/users/' + currentUsername + '/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(u)
+    }).then(r => r.json()).then(data => {
+        if (data.ok) showToast('✓ Профиль сохранён');
+    }).catch(() => showToast('✓ Сохранено локально'));
+
     closeOverlay('profileOverlay');
 }
 function pickAccent(color, el) {
@@ -2711,21 +2993,66 @@ function renderCipMembers() {
     if (!list) return;
     const members = c.members || [currentUsername];
     const users = getUsers();
+    const myRole = getMyRole(activeId);
+    const iAmAdmin = myRole === 'owner' || myRole === 'admin';
+    const iAmOwner = myRole === 'owner';
+
     list.innerHTML = members.map(un => {
         const u = users[un] || { name: un };
+        const displayName = getDisplayName(un) || u.name || un;
         const avaHtml = u.avatar
             ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-            : (u.name||un)[0].toUpperCase();
-        const isOwner = un === (c.owner || currentUsername);
-        return `<div class="cip-member" onclick="openUserProfile('${un}')">
-            <div class="cip-member-ava">${avaHtml}</div>
-            <div class="cip-member-info">
-                <div class="cip-member-name">${u.name || un}${isOwner ? ' 👑' : ''}</div>
+            : displayName[0].toUpperCase();
+        const roleBadge = getRoleBadge(un, c);
+        const isAdmin = c.admins && c.admins.includes(un);
+        const isOwner = un === c.owner;
+
+        let actions = '';
+        if (un !== currentUsername && iAmAdmin) {
+            // Кнопка смены роли (только владелец может назначать/снимать админов)
+            if (iAmOwner && !isOwner) {
+                actions += isAdmin
+                    ? `<button class="ma-btn" onclick="demoteAdmin('${un}')" title="Снять с админа">⬇</button>`
+                    : `<button class="ma-btn" onclick="promoteToAdmin('${un}')" title="Назначить админом">⚡</button>`;
+            }
+            // Передать владение (только владелец)
+            if (iAmOwner && !isOwner) {
+                actions += `<button class="ma-btn" onclick="transferOwnership('${un}')" title="Передать владение">👑</button>`;
+            }
+            // Кик (нельзя кикнуть владельца)
+            if (!isOwner) {
+                actions += `<button class="ma-btn danger" onclick="removeMember('${un}',event)" title="Удалить">✕</button>`;
+            }
+        }
+
+        return `<div class="cip-member">
+            <div class="cip-member-ava" onclick="openUserProfile('${un}')" style="cursor:pointer;">${avaHtml}</div>
+            <div class="cip-member-info" onclick="openUserProfile('${un}')" style="cursor:pointer;">
+                <div class="cip-member-name">${displayName}</div>
                 <div class="cip-member-tag">@${un}</div>
             </div>
-            ${un !== currentUsername ? `<button onclick="removeMember('${un}',event)" style="background:transparent;border:none;color:var(--text-3);cursor:pointer;font-size:0.75rem;padding:4px 6px;border-radius:6px;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-3)'">✕</button>` : ''}
+            ${roleBadge}
+            ${actions ? `<div class="member-actions-row">${actions}</div>` : ''}
         </div>`;
     }).join('');
+
+    // Показать/скрыть секции в зависимости от роли
+    const adminSection = document.getElementById('cipAdminSection');
+    const dangerZone = document.getElementById('cipDangerZone');
+    if (adminSection) adminSection.style.display = iAmAdmin ? 'block' : 'none';
+    if (dangerZone) dangerZone.style.display = iAmOwner ? 'block' : 'none';
+
+    // Обновить состояние тоглов
+    if (c.perms) {
+        ['write','invite','readonly'].forEach(p => {
+            const el = document.getElementById('toggle' + p.charAt(0).toUpperCase() + p.slice(1));
+            if (el) el.classList.toggle('on', !!c.perms[p]);
+        });
+    }
+
+    // Скрыть кнопку добавления если нет прав
+    const addBtn = document.getElementById('cipAddMemberBtn');
+    if (addBtn) addBtn.style.display = canInvite(activeId) ? 'flex' : 'none';
 }
 
 function openAddMember() {
@@ -2818,6 +3145,112 @@ function removeMember(username, e) {
 }
 
 
+
+// ── ROLES & PERMISSIONS ────────────────────────────────────
+// Роли: owner > admin > member
+// perms: { write: bool, invite: bool, readonly: bool }
+
+function getMyRole(chatId) {
+    const c = chats[chatId || activeId];
+    if (!c) return 'none';
+    if (c.owner === currentUsername) return 'owner';
+    if (c.admins && c.admins.includes(currentUsername)) return 'admin';
+    if (c.members && c.members.includes(currentUsername)) return 'member';
+    return 'none';
+}
+
+function canWrite(chatId) {
+    const c = chats[chatId || activeId];
+    if (!c) return false;
+    if (c.type === 'ЛС') return true;
+    const role = getMyRole(chatId);
+    if (role === 'owner' || role === 'admin') return true;
+    if (c.perms && c.perms.readonly) return false;
+    return true;
+}
+
+function canInvite(chatId) {
+    const c = chats[chatId || activeId];
+    if (!c) return false;
+    const role = getMyRole(chatId);
+    if (role === 'owner' || role === 'admin') return true;
+    return c.perms ? c.perms.invite !== false : true;
+}
+
+function canAdmin(chatId) {
+    const role = getMyRole(chatId);
+    return role === 'owner' || role === 'admin';
+}
+
+function getRoleBadge(username, c) {
+    if (username === c.owner) return '<span class="role-badge role-owner">👑 владелец</span>';
+    if (c.admins && c.admins.includes(username)) return '<span class="role-badge role-admin">⚡ админ</span>';
+    return '<span class="role-badge role-member">участник</span>';
+}
+
+function promoteToAdmin(username) {
+    const c = chats[activeId];
+    if (!c) return;
+    if (!c.admins) c.admins = [];
+    if (!c.admins.includes(username)) {
+        c.admins.push(username);
+        c.messages.push({ id: Date.now(), type: 'received', text: `⚡ ${username} стал администратором`, time: now(), sender: 'system' });
+        renderCipMembers();
+        renderMsgs();
+        saveChats();
+        showToast('✓ ' + username + ' — теперь админ');
+    }
+}
+
+function demoteAdmin(username) {
+    const c = chats[activeId];
+    if (!c || !c.admins) return;
+    c.admins = c.admins.filter(u => u !== username);
+    renderCipMembers();
+    saveChats();
+    showToast(username + ' — теперь участник');
+}
+
+function transferOwnership(username) {
+    if (!confirm('Передать права владельца ' + username + '? Это нельзя отменить.')) return;
+    const c = chats[activeId];
+    c.owner = username;
+    if (!c.admins) c.admins = [];
+    if (!c.admins.includes(currentUsername)) c.admins.push(currentUsername);
+    c.messages.push({ id: Date.now(), type: 'received', text: `👑 ${username} — новый владелец чата`, time: now(), sender: 'system' });
+    renderCipMembers();
+    renderMsgs();
+    saveChats();
+    showToast('Права переданы');
+}
+
+function toggleChatPerm(perm) {
+    const c = chats[activeId];
+    if (!c) return;
+    if (!c.perms) c.perms = { write: true, invite: true, readonly: false };
+    c.perms[perm] = !c.perms[perm];
+    const el = document.getElementById('toggle' + perm.charAt(0).toUpperCase() + perm.slice(1));
+    if (el) el.classList.toggle('on', c.perms[perm]);
+    saveChats();
+    showToast('Настройки обновлены');
+}
+
+function deleteChat() {
+    if (!confirm('Удалить чат? Все сообщения будут потеряны.')) return;
+    closeChatInfo();
+    const keys = Object.keys(chats);
+    delete chats[activeId];
+    const next = keys.filter(k => k !== activeId)[0];
+    if (next) switchChat(next);
+    else {
+        activeId = null;
+        document.getElementById('chatView').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'flex';
+    }
+    renderChats();
+    saveChats();
+}
+
 // ── CONTACTS SYSTEM ────────────────────────────────────────
 // Контакты хранятся отдельно от пользователей
 // { username: { nick: 'Мой псевдоним', addedAt: timestamp } }
@@ -2836,8 +3269,15 @@ function switchContactsTab(n) {
     });
     if (n === 1) renderContactsList();
     if (n === 2) {
+        currentSearchFilter = 'all';
+        ['all','online','contacts'].forEach(f => {
+            const el = document.getElementById('sf_' + f);
+            if (el) el.classList.toggle('active', f === 'all');
+        });
+        const inp = document.getElementById('peopleSearchInput');
+        if (inp) inp.value = '';
         searchPeople('');
-        setTimeout(() => document.getElementById('peopleSearchInput').focus(), 100);
+        setTimeout(() => { if (inp) inp.focus(); }, 100);
     }
 }
 
@@ -3249,8 +3689,20 @@ function scrollToMsg(id) {
 
 // ── USER PROFILE ───────────────────────────────────────────
 function openUserProfile(username) {
+    // Сначала показываем из кеша, потом обновляем с сервера
     const users = getUsers();
-    const u = users[username];
+    let u = users[username];
+    if (u) _renderUserProfile(username, u);
+    fetch('/api/users/' + username)
+        .then(r => r.json())
+        .then(fresh => {
+            if (fresh.error) { if (!u) showToast('Пользователь не найден'); return; }
+            users[username] = fresh; saveUsers(users);
+            _renderUserProfile(username, fresh);
+        })
+        .catch(() => { if (!u) showToast('Сервер недоступен'); });
+}
+function _renderUserProfile(username, u) {
     if (!u) { showToast('Пользователь не найден'); return; }
 
     // Аватар
@@ -3274,6 +3726,7 @@ function openUserProfile(username) {
     if (u.job)      infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">💼 ${u.job}</div>`);
     if (u.city)     infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">📍 ${u.city}</div>`);
     if (u.birthday) infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">🎂 ${formatBirthday(u.birthday)}</div>`);
+    if (u.phone && u.showPhone !== false) infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">📞 ${u.phone}</div>`);
     if (u.website)  infoRows.push(`<div style="font-size:0.78rem;"><a href="${u.website}" target="_blank" style="color:var(--accent);">🔗 ${u.website.replace(/https?:\/\//,'')}</a></div>`);
 
     if (infoRows.length) {
@@ -3295,48 +3748,136 @@ function formatBirthday(dateStr) {
 }
 
 // ── PEOPLE SEARCH ──────────────────────────────────────────
+let currentSearchFilter = 'all';
+
+function setSearchFilter(filter) {
+    currentSearchFilter = filter;
+    ['all','online','contacts'].forEach(f => {
+        const el = document.getElementById('sf_' + f);
+        if (el) el.classList.toggle('active', f === filter);
+    });
+    searchPeople(document.getElementById('peopleSearchInput').value);
+}
+
+function highlight(text, q) {
+    if (!q.trim()) return text;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return text;
+    return text.slice(0, idx) +
+        '<span class="search-highlight">' + text.slice(idx, idx + q.length) + '</span>' +
+        text.slice(idx + q.length);
+}
+
+let searchDebounceTimer = null;
+
 function searchPeople(q) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => _doSearch(q), 200);
+}
+
+function _doSearch(q) {
     const list = document.getElementById('peopleList');
-    const users = getUsers();
+    const stats = document.getElementById('searchStats');
     const contacts = getContacts();
-    const results = Object.entries(users).filter(([un, u]) =>
-        un !== currentUsername && (
-            !q.trim() ||
-            un.toLowerCase().includes(q.toLowerCase()) ||
-            (u.name||'').toLowerCase().includes(q.toLowerCase()) ||
-            ((contacts[un]||{}).nick||'').toLowerCase().includes(q.toLowerCase())
-        )
-    );
-    if (!results.length) {
-        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">' + (q.trim() ? 'Никого не найдено' : 'Нет других пользователей') + '</div>';
-        return;
-    }
-    list.innerHTML = results.map(([un, u]) => {
-        const ct = contacts[un];
-        const displayName = ct && ct.nick ? ct.nick : (u.name || un);
-        const isContact = !!ct;
-        const isOnline = u.status !== 'offline';
-        const avaHtml = u.avatar
-            ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-            : displayName[0].toUpperCase();
-        return `<div class="people-item">
-            <div class="people-ava" style="position:relative;" onclick="openUserProfile('${un}')">
-                ${avaHtml}
-                ${isOnline ? '<div style="position:absolute;bottom:0;right:0;width:9px;height:9px;background:var(--green);border-radius:50%;border:2px solid var(--surface);"></div>' : ''}
-            </div>
-            <div class="people-info" onclick="openUserProfile('${un}')">
-                <div class="people-name">${displayName}${isContact ? ' <span style="color:var(--green);font-size:0.65rem;">✓ контакт</span>' : ''}</div>
-                <div class="people-tag">@${un}${ct && ct.nick ? ' · ' + (u.name||un) : ''}</div>
-            </div>
-            <div style="display:flex;gap:5px;">
-                ${isContact
-                    ? `<button onclick="startDMFromContact('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;">💬</button>`
-                    : `<button onclick="addContact('${un}')" style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text-2);font-size:0.75rem;cursor:pointer;" title="Добавить в контакты">+ Контакт</button>
-                       <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;">💬</button>`
-                }
-            </div>
-        </div>`;
-    }).join('');
+
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);font-size:0.82rem;">🔍 Ищем...</div>';
+
+    const params = new URLSearchParams({ q: q || '', exclude: currentUsername });
+    if (currentSearchFilter === 'online') params.append('online', '1');
+
+    fetch('/api/users/search?' + params)
+    .then(r => r.json())
+    .then(results => {
+        // Фильтр контактов на клиенте
+        if (currentSearchFilter === 'contacts') {
+            results = results.filter(u => contacts[u.username]);
+        }
+
+        if (stats) stats.textContent = q ? `Найдено: ${results.length}` : `Всего пользователей: ${results.length}`;
+
+        if (!results.length) {
+            list.innerHTML = `<div style="text-align:center;padding:24px 16px;">
+                <div style="font-size:1.5rem;margin-bottom:8px;">${q ? '🔍' : '👥'}</div>
+                <div style="font-size:0.82rem;color:var(--text-3);">${q ? 'Никого не найдено по запросу «' + q + '»' : 'Нет других пользователей'}</div>
+            </div>`;
+            return;
+        }
+
+        // Кешируем найденных пользователей локально
+        const localUsers = getUsers();
+        results.forEach(u => { localUsers[u.username] = u; });
+        saveUsers(localUsers);
+
+        list.innerHTML = results.map(u => {
+            const un = u.username;
+            const ct = contacts[un];
+            const displayName = ct && ct.nick ? ct.nick : (u.name || un);
+            const isContact = !!ct;
+            const isOnline = u.status !== 'offline';
+            const avaHtml = u.avatar
+                ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                : `<span style="font-weight:600;">${displayName[0].toUpperCase()}</span>`;
+
+            const hlName = highlight(displayName, q);
+            const hlTag = highlight('@' + un, q);
+
+            return `<div class="people-item" style="padding:9px 4px;">
+                <div class="people-ava" style="position:relative;cursor:pointer;" onclick="openUserProfile('${un}')">
+                    ${avaHtml}
+                    <div style="position:absolute;bottom:0;right:0;width:9px;height:9px;
+                        background:${isOnline ? 'var(--green)' : 'var(--text-3)'};
+                        border-radius:50%;border:2px solid var(--surface);"></div>
+                </div>
+                <div class="people-info" style="cursor:pointer;" onclick="openUserProfile('${un}')">
+                    <div class="people-name" style="display:flex;align-items:center;gap:5px;">
+                        ${hlName}
+                        ${isContact ? '<span style="color:var(--green);font-size:0.62rem;font-weight:600;">✓</span>' : ''}
+                    </div>
+                    <div class="people-tag">
+                        ${hlTag}
+                        ${u.city ? ' · 📍' + u.city : ''}
+                        ${isOnline ? ' · <span style="color:var(--green);">онлайн</span>' : ''}
+                    </div>
+                </div>
+                <div style="display:flex;gap:4px;flex-shrink:0;">
+                    ${isContact
+                        ? `<button onclick="startDMFromContact('${un}')" title="Написать"
+                            style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.8rem;cursor:pointer;">💬</button>`
+                        : `<button onclick="addContactAndRefresh('${un}')"
+                            style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text-2);font-size:0.75rem;cursor:pointer;">+ Контакт</button>
+                           <button onclick="openDM('${un}')" title="Написать"
+                            style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.8rem;cursor:pointer;">💬</button>`
+                    }
+                </div>
+            </div>`;
+        }).join('');
+    })
+    .catch(() => {
+        // Офлайн — ищем локально
+        const users = getUsers();
+        const ql = (q||'').toLowerCase();
+        const results = Object.entries(users).filter(([un, u]) =>
+            un !== currentUsername && (!ql ||
+            un.toLowerCase().includes(ql) ||
+            (u.name||'').toLowerCase().includes(ql))
+        );
+        if (!results.length) {
+            list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);font-size:0.82rem;">Сервер недоступен. Локальных пользователей не найдено.</div>';
+            return;
+        }
+        list.innerHTML = results.map(([un, u]) => `
+            <div class="people-item" style="padding:9px 4px;">
+                <div class="people-ava">${u.name ? u.name[0].toUpperCase() : '?'}</div>
+                <div class="people-info"><div class="people-name">${u.name||un}</div><div class="people-tag">@${un}</div></div>
+                <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.8rem;cursor:pointer;">💬</button>
+            </div>`).join('');
+    });
+}
+
+function addContactAndRefresh(username) {
+    addContact(username);
+    // Небольшая задержка чтобы данные сохранились
+    setTimeout(() => searchPeople(document.getElementById('peopleSearchInput').value), 50);
 }
 
 function openDM(username) {
@@ -3354,7 +3895,9 @@ function openDM(username) {
 
     const localUsers = getUsers();
     const u = localUsers[username];
-    const displayName = getDisplayName(username) || (u ? (u.name || username) : username);
+    const contacts = getContacts();
+    const ct = contacts[username];
+    const displayName = (ct && ct.nick) || (u ? (u.name || username) : username);
 
     if (useServer) {
         // Создаём комнату через сервер
@@ -3517,8 +4060,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('app').style.display = 'flex';
         initApp(session, users[session]);
         connectToServer();
-         // Пробуем подключиться к серверу
-    connectToServer();
     } else {
         // Показываем экран входа
         document.getElementById('authScreen').style.display = 'flex';
