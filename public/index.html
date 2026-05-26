@@ -1619,54 +1619,78 @@ function switchChat(id) {
 }
 
 // ── MESSAGES ─────────────────────────────────────────────
+const ALL_REACTIONS = ['👍','❤️','😂','😮','😢','🔥','👏','🎉','😍','🤔','💀','👎'];
+
+function getUserAvaHtml(sender) {
+    try {
+        const users = getUsers();
+        const u = users[sender];
+        if (u && u.avatar) return '<img src="' + u.avatar + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+        return '<span>' + (sender ? sender[0].toUpperCase() : '?') + '</span>';
+    } catch(e) { return '?'; }
+}
+
 function renderMsgs(filter = '') {
     const area = document.getElementById('messagesArea');
+    const wasAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
     area.innerHTML = '';
     if (!chats[activeId]) return;
+
     chats[activeId].messages.forEach(m => {
         if (filter && !m.text?.toLowerCase().includes(filter)) return;
         const div = document.createElement('div');
         div.className = 'msg ' + m.type;
+        div.setAttribute('data-id', m.id);
 
         const reactions = m.reactions ? Object.entries(m.reactions)
             .filter(([,v]) => v > 0)
-            .map(([k, v]) => `<span class="react-chip" onclick="react(${m.id},'${k}')">${k} ${v}</span>`)
+            .map(([k, v]) => '<span class="react-chip" onclick="react(' + m.id + ',\'' + k + '\')">' + k + ' ' + v + '</span>')
             .join('') : '';
 
+        const safeText = (m.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const body = m.isFile
-            ? `<img src="${m.fileData}" onclick="openLightbox('${m.fileData}')">`
-            : m.text || '';
+            ? '<img src="' + m.fileData + '" onclick="openLightbox(\'' + m.fileData + '\')">'
+            : safeText;
+
+        const safeAttr = (m.text||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ');
 
         const editBtn = m.type === 'sent'
-            ? `<button class="msg-act-btn" onclick="startEdit(${m.id},'${(m.text||'').replace(/'/g,"\\'")}')">
-                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-               </button>` : '';
+            ? '<button class="msg-act-btn" onclick="startEdit(' + m.id + ',\'' + safeAttr + '\')" title="Изменить"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>'
+            : '';
 
-        div.innerHTML = `
-            <div class="msg-actions">
-                <button class="msg-act-btn" onclick="react(${m.id},'👍')">👍</button>
-                <button class="msg-act-btn" onclick="react(${m.id},'❤️')">❤️</button>
-                <button class="msg-act-btn" onclick="react(${m.id},'😂')">😂</button>
-                <button class="msg-act-btn" onclick="copyMsg('${(m.text||'').replace(/'/g,"\\'")}')">
-                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                </button>
-                <button class="msg-act-btn" onclick="pinMsg('${(m.text||'Изображение').replace(/'/g,"\\'")}')">
-                    <svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6l1.8 1.8L14.8 18v-4H20v-2l-4-4z"/></svg>
-                </button>
-                ${editBtn}
-                <button class="msg-act-btn" onclick="delMsg(${m.id})">
-                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                </button>
-            </div>
+        const replyPreview = m.replyTo
+            ? '<div class="msg-reply-preview" onclick="scrollToMsg(' + m.replyTo.id + ')"><div class="rp-author">' + (m.replyTo.sender||'') + '</div><div>' + (m.replyTo.text||'').replace(/</g,'&lt;').substring(0,80) + '</div></div>'
+            : '';
 
-            <div class="msg-bubble">${body}</div>
-            ${reactions ? `<div class="reactions">${reactions}</div>` : ''}
-            <div class="msg-time">${m.time}${m.edited ? ' · изм.' : ''}</div>
-        `;
+        const senderRow = (m.type === 'received' && m.sender)
+            ? '<div class="msg-sender-row"><div class="msg-sender-ava" onclick="openUserProfile(\'' + m.sender + '\')">' + getUserAvaHtml(m.sender) + '</div><span class="msg-sender-name" onclick="openUserProfile(\'' + m.sender + '\')">' + m.sender + '</span></div>'
+            : '';
+
+        const reactPicker = '<div class="react-picker" id="rp_' + m.id + '">' +
+            ALL_REACTIONS.map(e => '<span class="react-opt" onclick="react(' + m.id + ',\'' + e + '\');closeAllPickers()">' + e + '</span>').join('') +
+            '</div>';
+
+        div.innerHTML =
+            reactPicker +
+            '<div class="msg-actions">' +
+                '<button class="msg-act-btn" onclick="togglePicker(' + m.id + ',event)" title="Реакция">😊</button>' +
+                '<button class="msg-act-btn" onclick="replyTo(' + m.id + ')" title="Ответить"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-10z"/></svg></button>' +
+                '<button class="msg-act-btn" onclick="copyMsg(\'' + safeAttr + '\')" title="Копировать"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>' +
+                '<button class="msg-act-btn" onclick="pinMsg(\'' + safeAttr + '\')" title="Закрепить"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6l1.8 1.8L14.8 18v-4H20v-2l-4-4z"/></svg></button>' +
+                editBtn +
+                '<button class="msg-act-btn" onclick="delMsg(' + m.id + ')" title="Удалить"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>' +
+            '</div>' +
+            senderRow +
+            replyPreview +
+            '<div class="msg-bubble">' + body + '</div>' +
+            (reactions ? '<div class="reactions">' + reactions + '</div>' : '') +
+            '<div class="msg-time">' + m.time + (m.edited ? ' · изм.' : '') + '</div>';
+
         area.appendChild(div);
     });
-    requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
+    if (wasAtBottom) requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
 }
+
 function filterMsgs() { renderMsgs(document.getElementById('msgSearch').value.toLowerCase()); }
 
 function sendMsg() {
