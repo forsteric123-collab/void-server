@@ -1312,7 +1312,7 @@
                 <label>Повторите пароль</label>
                 <input type="password" id="regPass2" placeholder="••••••••" autocomplete="new-password">
             </div>
-            <button class="auth-btn" onclick="doRegister()">Создать аккаунт</button>
+            <button class="auth-btn" id="regSubmitBtn" onclick="doRegister()">Создать аккаунт</button>
         </div>
     </div>
 </div>
@@ -1963,7 +1963,7 @@ function doLogin() {
     if (!user || !pass) return showAuthError('Заполните все поля');
 
     const btn = document.getElementById('authSubmitBtn');
-    btn.textContent = 'Вход...'; btn.disabled = true;
+    if (btn) { btn.textContent = 'Вход...'; btn.disabled = true; }
 
     fetch('/api/login', {
         method: 'POST',
@@ -1972,22 +1972,21 @@ function doLogin() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.error) { showAuthError(data.error); btn.textContent = 'Войти'; btn.disabled = false; return; }
+        if (btn) { btn.textContent = 'Войти'; btn.disabled = false; }
+        if (data.error) { showAuthError(data.error); return; }
         // Сохранить в localStorage для офлайн доступа
         const users = getUsers();
         users[data.user.username] = { ...data.user, password: btoa(unescape(encodeURIComponent(pass))) };
         saveUsers(users);
         Store.set('void_session', data.user.username);
-        btn.textContent = 'Войти'; btn.disabled = false;
         enterApp(data.user.username, data.user);
     })
     .catch(() => {
-        // Сервер недоступен — пробуем локально
+        if (btn) { btn.textContent = 'Войти'; btn.disabled = false; }
         const freshUsers = getUsers();
-        if (!freshUsers[user]) { showAuthError('Сервер недоступен и локального аккаунта нет'); btn.textContent = 'Войти'; btn.disabled = false; return; }
-        if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) { showAuthError('Неверный пароль'); btn.textContent = 'Войти'; btn.disabled = false; return; }
+        if (!freshUsers[user]) { showAuthError('Сервер недоступен и локального аккаунта нет'); return; }
+        if (freshUsers[user].password !== btoa(unescape(encodeURIComponent(pass)))) { showAuthError('Неверный пароль'); return; }
         Store.set('void_session', user);
-        btn.textContent = 'Войти'; btn.disabled = false;
         enterApp(user, freshUsers[user]);
     });
 }
@@ -2003,8 +2002,8 @@ function doRegister() {
     if (pass !== pass2) return showAuthError('Пароли не совпадают');
     if (!/^[a-zа-я0-9_]+$/i.test(user)) return showAuthError('Только буквы, цифры и _');
 
-    const btn = document.getElementById('authSubmitBtn');
-    btn.textContent = 'Создание...'; btn.disabled = true;
+    const btn = document.getElementById('regSubmitBtn');
+    if (btn) { btn.textContent = 'Создание...'; btn.disabled = true; }
 
     fetch('/api/register', {
         method: 'POST',
@@ -2013,22 +2012,22 @@ function doRegister() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.error) { showAuthError(data.error); btn.textContent = 'Создать аккаунт'; btn.disabled = false; return; }
+        if (btn) { btn.textContent = 'Создать аккаунт'; btn.disabled = false; }
+        if (data.error) { showAuthError(data.error); return; }
         const users = getUsers();
-        users[user] = { ...data.user, password: btoa(unescape(encodeURIComponent(pass))) };
+        users[data.user.username] = { ...data.user, password: btoa(unescape(encodeURIComponent(pass))) };
         saveUsers(users);
-        Store.set('void_session', user);
-        btn.textContent = 'Создать аккаунт'; btn.disabled = false;
-        enterApp(user, data.user);
+        Store.set('void_session', data.user.username);
+        enterApp(data.user.username, data.user);
     })
     .catch(() => {
+        if (btn) { btn.textContent = 'Создать аккаунт'; btn.disabled = false; }
         // Офлайн режим
         const freshUsers = getUsers();
-        if (freshUsers[user]) { showAuthError('Имя занято'); btn.textContent = 'Создать аккаунт'; btn.disabled = false; return; }
+        if (freshUsers[user]) { showAuthError('Имя занято'); return; }
         freshUsers[user] = { name, password: btoa(unescape(encodeURIComponent(pass))), status: 'online', accent: '#6b8afd' };
         saveUsers(freshUsers);
         Store.set('void_session', user);
-        btn.textContent = 'Создать аккаунт'; btn.disabled = false;
         enterApp(user, freshUsers[user]);
     });
 }
