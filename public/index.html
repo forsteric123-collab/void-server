@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Void — Messenger</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0c0c0e;
@@ -48,7 +48,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--bg);
             color: var(--text);
             height: 100vh;
@@ -56,7 +56,13 @@
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: -0.01em;
         }
+        h1,h2,h3 { letter-spacing: -0.03em; }
+        .msg-bubble { line-height: 1.6; letter-spacing: 0; }
+        .user-name, .chat-name, .hdr-name, .chat-header-name { font-weight: 600; letter-spacing: -0.02em; }
 
 
         /* ── AUTH SCREEN ─────────────────────────────── */
@@ -77,7 +83,7 @@
             padding: 36px 32px 28px;
         }
         .auth-logo {
-            font-family: 'DM Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 1.4rem;
             margin-bottom: 6px;
             color: var(--text);
@@ -117,7 +123,7 @@
             border-radius: var(--radius-sm);
             padding: 10px 13px;
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.88rem;
             outline: none;
             transition: border-color var(--transition);
@@ -140,7 +146,7 @@
             background: var(--accent);
             border: none; border-radius: var(--radius-sm);
             color: #fff;
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.88rem; font-weight: 500;
             cursor: pointer;
             transition: opacity var(--transition), transform var(--transition);
@@ -178,7 +184,7 @@
             border-bottom: 1px solid var(--border);
         }
         .app-wordmark {
-            font-family: 'DM Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 1rem;
             color: var(--text);
             letter-spacing: -0.3px;
@@ -209,7 +215,7 @@
             border-radius: var(--radius-sm);
             padding: 9px 12px;
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.82rem;
             outline: none;
             transition: border-color var(--transition);
@@ -309,30 +315,35 @@
             align-items: center;
             gap: 10px;
         }
+        .user-ava-wrap {
+            position: relative;
+            flex-shrink: 0;
+            width: 36px; height: 36px;
+        }
         .user-ava {
-            width: 34px; height: 34px;
+            width: 36px; height: 36px;
             border-radius: 50%;
             background: var(--accent-dim);
             border: 1px solid var(--accent-glow);
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.85rem;
-            flex-shrink: 0;
+            font-size: 0.9rem;
             overflow: hidden;
-            position: relative;
         }
         .user-ava img { width: 100%; height: 100%; object-fit: cover; }
         .status-ring {
-            width: 8px; height: 8px;
+            width: 10px; height: 10px;
             border-radius: 50%;
             background: var(--green);
-            position: absolute; bottom: 0; right: 0;
+            position: absolute;
+            bottom: -1px; right: -1px;
             border: 2px solid var(--surface);
+            z-index: 10;
         }
         .status-ring.offline { background: var(--text-3); }
 
         .user-details { flex: 1; overflow: hidden; }
         .user-name { font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .user-tag { font-size: 0.7rem; color: var(--text-2); font-family: 'DM Mono', monospace; }
+        .user-tag { font-size: 0.7rem; color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
 
         /* ── CHAT PANEL ──────────────────────────────── */
         .chat-panel {
@@ -366,7 +377,7 @@
             border-radius: 8px;
             padding: 7px 11px;
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.78rem;
             outline: none;
             width: 110px;
@@ -451,7 +462,7 @@
         .msg-time {
             font-size: 0.65rem;
             color: var(--text-3);
-            font-family: 'DM Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
         }
         .msg.sent .msg-time { text-align: right; }
         .msg-edited { font-size: 0.6rem; color: var(--text-3); }
@@ -550,7 +561,7 @@
             border-radius: 12px;
             padding: 10px 14px;
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.88rem;
             outline: none;
             transition: border-color var(--transition);
@@ -623,7 +634,7 @@
             border-radius: var(--radius-sm);
             padding: 9px 12px;
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.88rem;
             outline: none;
             transition: border-color var(--transition);
@@ -638,7 +649,7 @@
             border: none;
             border-radius: var(--radius-sm);
             color: #fff;
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 0.88rem;
             font-weight: 500;
             cursor: pointer;
@@ -763,7 +774,7 @@
         }
         .user-profile-ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .user-profile-name { text-align: center; font-size: 1rem; font-weight: 500; margin-bottom: 3px; }
-        .user-profile-tag { text-align: center; font-size: 0.78rem; color: var(--text-2); font-family: 'DM Mono', monospace; }
+        .user-profile-tag { text-align: center; font-size: 0.78rem; color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
 
         /* ── PEOPLE SEARCH ───────────────────────────── */
         .people-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-height: 260px; overflow-y: auto; }
@@ -786,7 +797,7 @@
         .people-ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .people-info { flex: 1; }
         .people-name { font-size: 0.88rem; font-weight: 500; }
-        .people-tag { font-size: 0.72rem; color: var(--text-2); font-family: 'DM Mono', monospace; }
+        .people-tag { font-size: 0.72rem; color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
 
         /* ── REACTIONS PICKER ────────────────────────── */
         .react-picker {
@@ -807,6 +818,28 @@
         .react-opt { font-size: 1.1rem; cursor: pointer; padding: 2px 3px; border-radius: 4px; transition: transform 0.1s; }
         .react-opt:hover { transform: scale(1.3); }
 
+
+        /* ── GLOBAL SEARCH DROPDOWN ─────────────────── */
+        #peopleDropdown .sd-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px; cursor: pointer;
+            transition: background var(--transition);
+            font-size: 0.85rem;
+        }
+        #peopleDropdown .sd-item:hover { background: var(--surface2); }
+        #peopleDropdown .sd-ava {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--surface3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; flex-shrink: 0; overflow: hidden;
+        }
+        #peopleDropdown .sd-ava img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+        #peopleDropdown .sd-label { flex:1; }
+        #peopleDropdown .sd-sub { font-size:0.7rem; color:var(--text-2); }
+        #peopleDropdown .sd-section {
+            font-size:0.65rem; color:var(--text-3); padding:6px 14px 2px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
         /* ── WALLPAPER ───────────────────────────────── */
         .messages-area.has-wallpaper {
             background-attachment: local;
@@ -884,7 +917,7 @@
         .char-counter {
             font-size: 0.68rem;
             color: var(--text-3);
-            font-family: 'DM Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             padding: 0 4px;
             transition: color var(--transition);
             white-space: nowrap;
@@ -934,7 +967,7 @@
             font-size: 1.6rem;
             font-weight: 500;
             color: var(--accent);
-            font-family: 'DM Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             line-height: 1;
             margin-bottom: 4px;
         }
@@ -1020,36 +1053,80 @@
 
     <!-- Profile modal -->
     <div class="overlay" id="profileOverlay">
-        <div class="modal">
+        <div class="modal" style="max-width:400px;">
             <div class="modal-head">
-                Профиль
+                Мой профиль
                 <button class="modal-close" onclick="closeOverlay('profileOverlay')">✕</button>
             </div>
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
-                <div id="avatarPreview">👤</div>
-                <label style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.78rem;color:var(--text-2);">
-                    Фото
-                    <input type="file" id="avaFile" accept="image/*" style="display:none;" onchange="previewAva(this)">
-                </label>
-            </div>
-            <div class="field"><label>Имя</label><input type="text" id="pName"></div>
-            <div class="field"><label>Статус</label>
-                <select id="pStatus">
-                    <option value="online">В сети</option>
-                    <option value="offline">Вне сети</option>
-                </select>
-            </div>
-            <div style="margin-bottom:14px;">
-                <div style="font-size:0.75rem;color:var(--text-2);margin-bottom:8px;">Акцент</div>
-                <div class="color-row">
-                    <div class="cdot sel" style="background:#6b8afd;" onclick="pickAccent('#6b8afd',this)"></div>
-                    <div class="cdot" style="background:#7c5cfc;" onclick="pickAccent('#7c5cfc',this)"></div>
-                    <div class="cdot" style="background:#3ecf8e;" onclick="pickAccent('#3ecf8e',this)"></div>
-                    <div class="cdot" style="background:#f59f00;" onclick="pickAccent('#f59f00',this)"></div>
-                    <div class="cdot" style="background:#e8588a;" onclick="pickAccent('#e8588a',this)"></div>
+
+            <!-- Аватар -->
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+                <div id="avatarPreview" style="position:relative;">👤</div>
+                <div>
+                    <label style="display:inline-block;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.78rem;color:var(--text-2);margin-bottom:6px;">
+                        📷 Загрузить фото
+                        <input type="file" id="avaFile" accept="image/*" style="display:none;" onchange="previewAva(this)">
+                    </label>
+                    <div style="font-size:0.72rem;color:var(--text-3);">JPG, PNG, GIF до 5 МБ</div>
                 </div>
             </div>
-            <button class="primary-btn" onclick="saveProfile()">Сохранить</button>
+
+            <!-- Вкладки -->
+            <div style="display:flex;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;gap:3px;margin-bottom:18px;">
+                <div class="auth-tab active" id="ptab1" onclick="switchProfileTab(1)" style="flex:1;">Основное</div>
+                <div class="auth-tab" id="ptab2" onclick="switchProfileTab(2)" style="flex:1;">О себе</div>
+                <div class="auth-tab" id="ptab3" onclick="switchProfileTab(3)" style="flex:1;">Внешний вид</div>
+            </div>
+
+            <!-- Таб 1: Основное -->
+            <div id="ptabContent1">
+                <div class="field"><label>Отображаемое имя</label><input type="text" id="pName" placeholder="Иван Иванов"></div>
+                <div class="field"><label>Юзернейм</label><input type="text" id="pUsername" placeholder="ivan_iv" style="font-family:'JetBrains Mono',monospace;"></div>
+                <div class="field"><label>Статус присутствия</label>
+                    <select id="pStatus">
+                        <option value="online">🟢 В сети</option>
+                        <option value="offline">⚫ Не в сети</option>
+                    </select>
+                </div>
+                <div class="field"><label>Статус-сообщение</label><input type="text" id="pStatusMsg" placeholder="Чем занимаешься?"></div>
+            </div>
+
+            <!-- Таб 2: О себе -->
+            <div id="ptabContent2" style="display:none;">
+                <div class="field">
+                    <label>О себе</label>
+                    <textarea id="pBio" placeholder="Расскажи о себе..." rows="3" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:vertical;width:100%;box-sizing:border-box;transition:border-color var(--transition);" onfocus="this.style.borderColor='rgba(107,138,253,0.5)'" onblur="this.style.borderColor=''"></textarea>
+                </div>
+                <div class="field"><label>Дата рождения</label><input type="date" id="pBirthday"></div>
+                <div class="field"><label>Город</label><input type="text" id="pCity" placeholder="Москва"></div>
+                <div class="field"><label>Сайт / ссылка</label><input type="text" id="pWebsite" placeholder="https://..."></div>
+                <div class="field"><label>Профессия</label><input type="text" id="pJob" placeholder="Разработчик, дизайнер..."></div>
+            </div>
+
+            <!-- Таб 3: Внешний вид -->
+            <div id="ptabContent3" style="display:none;">
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:0.75rem;color:var(--text-2);margin-bottom:8px;">Цвет акцента</div>
+                    <div class="color-row">
+                        <div class="cdot sel" style="background:#6b8afd;" onclick="pickAccent('#6b8afd',this)"></div>
+                        <div class="cdot" style="background:#7c5cfc;" onclick="pickAccent('#7c5cfc',this)"></div>
+                        <div class="cdot" style="background:#3ecf8e;" onclick="pickAccent('#3ecf8e',this)"></div>
+                        <div class="cdot" style="background:#f59f00;" onclick="pickAccent('#f59f00',this)"></div>
+                        <div class="cdot" style="background:#e8588a;" onclick="pickAccent('#e8588a',this)"></div>
+                        <div class="cdot" style="background:#00bcd4;" onclick="pickAccent('#00bcd4',this)"></div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Размер текста</label>
+                    <select id="pFontSize" onchange="changeFontSize(this.value)">
+                        <option value="13">Обычный</option>
+                        <option value="15">Крупный</option>
+                        <option value="11">Мелкий</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="primary-btn" onclick="saveProfile()" style="margin-top:4px;">Сохранить</button>
             <button class="ghost-btn" onclick="logout()">Выйти из аккаунта</button>
         </div>
     </div>
@@ -1095,16 +1172,27 @@
 
     <!-- User profile view modal -->
     <div class="overlay" id="userProfileOverlay">
-        <div class="modal" style="max-width:300px;">
+        <div class="modal" style="max-width:320px;">
             <div class="modal-head">
                 Профиль
                 <button class="modal-close" onclick="closeOverlay('userProfileOverlay')">✕</button>
             </div>
-            <div class="user-profile-ava" id="upAva">👤</div>
+            <!-- Аватар + онлайн -->
+            <div style="position:relative;width:80px;margin:0 auto 14px;">
+                <div class="user-profile-ava" id="upAva">👤</div>
+                <div id="upOnlineDot" style="display:none;position:absolute;bottom:3px;right:3px;width:13px;height:13px;background:var(--green);border-radius:50%;border:2px solid var(--surface);"></div>
+            </div>
             <div class="user-profile-name" id="upName"></div>
             <div class="user-profile-tag" id="upTag"></div>
-            <div style="height:16px;"></div>
-            <button class="primary-btn" onclick="closeOverlay('userProfileOverlay')">Закрыть</button>
+            <div id="upStatusMsg" style="text-align:center;font-size:0.8rem;color:var(--text-2);margin-top:4px;font-style:italic;"></div>
+            <div id="upOnlineStatus" style="text-align:center;font-size:0.72rem;color:var(--text-3);margin-top:3px;"></div>
+
+            <!-- Инфо блок -->
+            <div id="upInfoBlock" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:14px 0;display:none;flex-direction:column;gap:8px;">
+            </div>
+
+            <button class="primary-btn" id="upDmBtn">💬 Написать</button>
+            <button class="ghost-btn" onclick="closeOverlay('userProfileOverlay')">Закрыть</button>
         </div>
     </div>
 
@@ -1187,15 +1275,18 @@
             </div>
         </div>
 
-        <div class="search-wrap">
-            <input type="text" id="chatSearch" placeholder="Поиск..." oninput="filterChats()">
+        <div class="search-wrap" style="position:relative;">
+            <input type="text" id="chatSearch" placeholder="Поиск чатов и людей..." oninput="globalSearch(this.value)" autocomplete="off">
+            <div id="peopleDropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:0 0 12px 12px;z-index:100;max-height:220px;overflow-y:auto;"></div>
         </div>
 
         <div class="chats-list" id="chatsList"></div>
 
         <div class="user-bar">
-            <div class="user-ava" id="userAvaEl">
-                <span id="userAvaEmoji">👤</span>
+            <div class="user-ava-wrap">
+                <div class="user-ava" id="userAvaEl">
+                    <span id="userAvaEmoji">👤</span>
+                </div>
                 <div class="status-ring" id="statusRing"></div>
             </div>
             <div class="user-details">
@@ -1278,8 +1369,8 @@
                     <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-3.31 2.69-6 6-6s6 2.69 6 6v10.5c0 4.42-3.58 8-8 8s-8-3.58-8-8V6h2v10.5c0 3.31 2.69 6 6 6s6-2.69 6-6V5c0-2.21-1.79-4-4-4s-4 1.79-4 4v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
                     <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="attachFile(this)">
                 </label>
-                <input type="text" class="msg-input" id="msgInput" placeholder="Сообщение…" autocomplete="off" oninput="updateCharCounter(this)" maxlength="500">
-                <span class="char-counter" id="charCounter">0/500</span>
+                <input type="text" class="msg-input" id="msgInput" placeholder="Сообщение…" autocomplete="off" oninput="updateCharCounter(this)" >
+                
                 <button class="send-btn" onclick="sendMsg()">
                     <svg viewBox="0 0 24 24"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/></svg>
                 </button>
@@ -1579,7 +1670,7 @@ function renderChats(filter = '') {
         list.appendChild(div);
     });
 }
-function filterChats() { renderChats(document.getElementById('chatSearch').value); }
+function filterChats(q) { renderChats(q !== undefined ? q : document.getElementById('chatSearch').value); }
 
 // ── SWITCH CHAT ──────────────────────────────────────────
 function switchChat(id) {
@@ -1858,17 +1949,37 @@ function saveCustom() {
 }
 
 // ── PROFILE ──────────────────────────────────────────────
+function switchProfileTab(n) {
+    [1,2,3].forEach(i => {
+        document.getElementById('ptab'+i).classList.toggle('active', i===n);
+        document.getElementById('ptabContent'+i).style.display = i===n ? 'block' : 'none';
+    });
+}
+
+function changeFontSize(size) {
+    document.querySelectorAll('.msg-bubble').forEach(el => el.style.fontSize = size + 'px');
+    const users = getUsers();
+    if (users[currentUsername]) { users[currentUsername].fontSize = size; saveUsers(users); }
+}
+
 function openProfileModal() {
     const users = getUsers();
     const u = users[currentUsername];
-    document.getElementById('pName').value = u.name;
+    document.getElementById('pName').value = u.name || '';
+    document.getElementById('pUsername').value = currentUsername;
     document.getElementById('pStatus').value = u.status || 'online';
+    document.getElementById('pStatusMsg').value = u.statusMsg || '';
+    document.getElementById('pBio').value = u.bio || '';
+    document.getElementById('pBirthday').value = u.birthday || '';
+    document.getElementById('pCity').value = u.city || '';
+    document.getElementById('pWebsite').value = u.website || '';
+    document.getElementById('pJob').value = u.job || '';
+    if (u.fontSize) document.getElementById('pFontSize').value = u.fontSize;
     const preview = document.getElementById('avatarPreview');
-    if (u.avatar) {
-        preview.innerHTML = `<img src="${u.avatar}">`;
-    } else {
-        preview.textContent = '👤';
-    }
+    preview.style.cssText = 'width:60px;height:60px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:1.5rem;overflow:hidden;flex-shrink:0;';
+    if (u.avatar) preview.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    else preview.textContent = (u.name||currentUsername)[0].toUpperCase();
+    switchProfileTab(1);
     openOverlay('profileOverlay');
 }
 function previewAva(input) {
@@ -1886,14 +1997,39 @@ function saveProfile() {
     const u = users[currentUsername];
     u.name = document.getElementById('pName').value.trim() || u.name;
     u.status = document.getElementById('pStatus').value;
+    u.statusMsg = document.getElementById('pStatusMsg').value.trim();
+    u.bio = document.getElementById('pBio').value.trim();
+    u.birthday = document.getElementById('pBirthday').value;
+    u.city = document.getElementById('pCity').value.trim();
+    u.website = document.getElementById('pWebsite').value.trim();
+    u.job = document.getElementById('pJob').value.trim();
+    u.fontSize = document.getElementById('pFontSize').value;
+    // Смена юзернейма
+    const newUsername = document.getElementById('pUsername').value.trim().toLowerCase();
+    if (newUsername && newUsername !== currentUsername) {
+        if (!/^[a-zа-я0-9_]+$/i.test(newUsername)) {
+            showToast('Только буквы, цифры и _'); return;
+        }
+        if (users[newUsername]) {
+            showToast('Юзернейм занят'); return;
+        }
+        // Переносим данные
+        users[newUsername] = { ...u };
+        delete users[currentUsername];
+        saveUsers(users);
+        // Переносим чаты
+        const oldKey = `void_chats_${currentUsername}`;
+        const chatData = Store.get(oldKey);
+        if (chatData) { Store.set(`void_chats_${newUsername}`, chatData); Store.del(oldKey); }
+        Store.set('void_session', newUsername);
+        currentUsername = newUsername;
+        document.getElementById('userTagEl').textContent = '@' + newUsername;
+        showToast('✓ Юзернейм изменён');
+    }
     if (tempAva) {
         u.avatar = tempAva;
         const ae = document.getElementById('userAvaEl');
         ae.innerHTML = `<img src="${tempAva}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-        const ring = document.createElement('div');
-        ring.className = 'status-ring' + (u.status === 'offline' ? ' offline' : '');
-        ring.id = 'statusRing';
-        ae.appendChild(ring);
         tempAva = null;
     }
     document.getElementById('userNameEl').textContent = u.name;
@@ -1949,6 +2085,64 @@ function updateThemeIcon(isLight) {
 }
 
 
+
+
+// ── GLOBAL SEARCH ─────────────────────────────────────────
+function globalSearch(q) {
+    filterChats(q);
+    const dd = document.getElementById('peopleDropdown');
+    if (!q.trim()) { dd.style.display = 'none'; return; }
+
+    const users = getUsers();
+    const peopleResults = Object.entries(users).filter(([un, u]) =>
+        un !== currentUsername && (
+            un.toLowerCase().includes(q.toLowerCase()) ||
+            (u.name||'').toLowerCase().includes(q.toLowerCase())
+        )
+    );
+
+    const chatResults = Object.entries(chats).filter(([id, c]) =>
+        c.name.toLowerCase().includes(q.toLowerCase())
+    );
+
+    if (!peopleResults.length && !chatResults.length) {
+        dd.style.display = 'none'; return;
+    }
+
+    let html = '';
+
+    if (chatResults.length) {
+        html += '<div class="sd-section">Чаты</div>';
+        html += chatResults.slice(0,4).map(([id, c]) => {
+            const ava = c.avatarImg ? `<img src="${c.avatarImg}">` : c.avatar;
+            return `<div class="sd-item" onclick="switchChat('${id}');document.getElementById('chatSearch').value='';document.getElementById('peopleDropdown').style.display='none';">
+                <div class="sd-ava">${ava}</div>
+                <div class="sd-label">${c.name}<div class="sd-sub">${c.type}</div></div>
+            </div>`;
+        }).join('');
+    }
+
+    if (peopleResults.length) {
+        html += '<div class="sd-section">Люди</div>';
+        html += peopleResults.slice(0,4).map(([un, u]) => {
+            const ava = u.avatar ? `<img src="${u.avatar}">` : (u.name||un)[0].toUpperCase();
+            return `<div class="sd-item" onclick="openUserProfile('${un}');document.getElementById('chatSearch').value='';document.getElementById('peopleDropdown').style.display='none';">
+                <div class="sd-ava">${ava}</div>
+                <div class="sd-label">${u.name||un}<div class="sd-sub">@${un}</div></div>
+            </div>`;
+        }).join('');
+    }
+
+    dd.innerHTML = html;
+    dd.style.display = 'block';
+}
+// Закрывать дропдаун при клике вне
+document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) {
+        const dd = document.getElementById('peopleDropdown');
+        if (dd) dd.style.display = 'none';
+    }
+});
 
 // ── WALLPAPERS ────────────────────────────────────────────
 const WALLPAPERS = [
@@ -2189,13 +2383,47 @@ function scrollToMsg(id) {
 function openUserProfile(username) {
     const users = getUsers();
     const u = users[username];
-    if (!u) return;
+    if (!u) { showToast('Пользователь не найден'); return; }
+
+    // Аватар
     const ava = document.getElementById('upAva');
-    if (u.avatar) ava.innerHTML = `<img src="${u.avatar}">`;
+    ava.style.cssText = 'width:80px;height:80px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin:0 auto;overflow:hidden;';
+    if (u.avatar) ava.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     else ava.textContent = (u.name||username)[0].toUpperCase();
+
     document.getElementById('upName').textContent = u.name || username;
     document.getElementById('upTag').textContent = '@' + username;
+    document.getElementById('upStatusMsg').textContent = u.statusMsg || '';
+    const isOnline = u.status !== 'offline';
+    document.getElementById('upOnlineStatus').textContent = isOnline ? '🟢 В сети' : '⚫ Не в сети';
+    const dot = document.getElementById('upOnlineDot');
+    if (dot) dot.style.display = isOnline ? 'block' : 'none';
+
+    // Инфо блок
+    const infoBlock = document.getElementById('upInfoBlock');
+    const infoRows = [];
+    if (u.bio)      infoRows.push(`<div style="font-size:0.83rem;color:var(--text);line-height:1.5;">${u.bio}</div>`);
+    if (u.job)      infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">💼 ${u.job}</div>`);
+    if (u.city)     infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">📍 ${u.city}</div>`);
+    if (u.birthday) infoRows.push(`<div style="font-size:0.78rem;color:var(--text-2);">🎂 ${formatBirthday(u.birthday)}</div>`);
+    if (u.website)  infoRows.push(`<div style="font-size:0.78rem;"><a href="${u.website}" target="_blank" style="color:var(--accent);">🔗 ${u.website.replace(/https?:\/\//,'')}</a></div>`);
+
+    if (infoRows.length) {
+        infoBlock.innerHTML = infoRows.join('');
+        infoBlock.style.display = 'flex';
+    } else {
+        infoBlock.style.display = 'none';
+    }
+
+    const dmBtn = document.getElementById('upDmBtn');
+    dmBtn.onclick = () => { closeOverlay('userProfileOverlay'); openDM(username); };
     openOverlay('userProfileOverlay');
+}
+
+function formatBirthday(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:'numeric' });
 }
 
 // ── PEOPLE SEARCH ──────────────────────────────────────────
@@ -2223,7 +2451,7 @@ function searchPeople(q) {
                 <div class="people-name">${u.name || un}</div>
                 <div class="people-tag">@${un}</div>
             </div>
-            <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;">ЛС</button>
+            <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;font-family:'Inter',sans-serif;">ЛС</button>
         </div>`;
     }).join('');
 }
@@ -2263,12 +2491,7 @@ function openDM(username) {
 }
 
 // ── CHAR COUNTER ─────────────────────────────────────────
-function updateCharCounter(input) {
-    const len = input.value.length;
-    const el = document.getElementById('charCounter');
-    el.textContent = len + '/500';
-    el.className = 'char-counter' + (len >= 500 ? ' limit' : len >= 400 ? ' warn' : '');
-}
+function updateCharCounter(input) {}
 
 // ── COPY MESSAGE ─────────────────────────────────────────
 function copyMsg(text) {
