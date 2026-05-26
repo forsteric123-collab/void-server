@@ -1112,16 +1112,14 @@
     <div class="overlay" id="peopleOverlay">
         <div class="modal">
             <div class="modal-head">
-                Поиск людей
+                Люди
                 <button class="modal-close" onclick="closeOverlay('peopleOverlay')">✕</button>
             </div>
             <div class="field">
-                <label>Юзернейм</label>
-                <input type="text" id="peopleSearchInput" placeholder="Введите @username..." oninput="searchPeople(this.value)">
+                <label>Поиск по имени или @юзернейму</label>
+                <input type="text" id="peopleSearchInput" placeholder="Начните вводить..." oninput="searchPeople(this.value)">
             </div>
-            <div class="people-list" id="peopleList">
-                <div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">Начните вводить юзернейм</div>
-            </div>
+            <div class="people-list" id="peopleList"></div>
             <button class="ghost-btn" onclick="closeOverlay('peopleOverlay')">Закрыть</button>
         </div>
     </div>
@@ -1177,7 +1175,7 @@
                 <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Тема">
                     <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
                 </button>
-                <button class="icon-btn" onclick="openOverlay('peopleOverlay')" title="Поиск людей">
+                <button class="icon-btn" onclick="openOverlay('peopleOverlay');searchPeople('')" title="Поиск людей">
                     <svg width="15" height="15" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                 </button>
                 <button class="icon-btn" onclick="openLangModal()" title="Язык">
@@ -2182,28 +2180,62 @@ function searchPeople(q) {
     const users = getUsers();
     const results = Object.entries(users).filter(([un, u]) =>
         un !== currentUsername && (
+            !q.trim() ||
             un.toLowerCase().includes(q.toLowerCase()) ||
             (u.name||'').toLowerCase().includes(q.toLowerCase())
         )
     );
-    if (!q.trim()) {
-        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">Начните вводить юзернейм</div>';
-        return;
-    }
     if (!results.length) {
-        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">Никого не найдено</div>';
+        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:16px;">' + (q.trim() ? 'Никого не найдено' : 'Нет других пользователей') + '</div>';
         return;
     }
     list.innerHTML = results.map(([un, u]) => {
-        const avaHtml = u.avatar ? `<img src="${u.avatar}">` : (u.name||un)[0].toUpperCase();
-        return `<div class="people-item" onclick="openUserProfile('${un}')">
-            <div class="people-ava">${avaHtml}</div>
-            <div class="people-info">
+        const avaHtml = u.avatar
+            ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+            : (u.name||un)[0].toUpperCase();
+        return `<div class="people-item">
+            <div class="people-ava" onclick="openUserProfile('${un}')">${avaHtml}</div>
+            <div class="people-info" onclick="openUserProfile('${un}')">
                 <div class="people-name">${u.name || un}</div>
                 <div class="people-tag">@${un}</div>
             </div>
+            <button onclick="openDM('${un}')" style="background:var(--accent);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;">ЛС</button>
         </div>`;
     }).join('');
+}
+
+function openDM(username) {
+    // Проверяем есть ли уже ЛС с этим юзером
+    const dmKey = [currentUsername, username].sort().join('_');
+    const existingId = Object.keys(chats).find(id => chats[id].dmKey === dmKey);
+    closeOverlay('peopleOverlay');
+
+    if (existingId) {
+        switchChat(existingId);
+        return;
+    }
+
+    // Создаём новый ЛС чат
+    const users = getUsers();
+    const u = users[username];
+    const id = String(Date.now());
+    chats[id] = {
+        name: u ? u.name : username,
+        avatar: u && u.avatar ? '' : (u ? u.name[0] : username[0]).toUpperCase(),
+        avatarImg: u && u.avatar ? u.avatar : null,
+        type: 'ЛС',
+        unread: 0,
+        updated: Date.now(),
+        pinned: null,
+        messages: [],
+        dmKey: dmKey,
+        dmWith: username,
+        isSystem: false
+    };
+    renderChats();
+    switchChat(id);
+    saveChats();
+    showToast('💬 Личные сообщения с ' + (u ? u.name : username));
 }
 
 // ── CHAR COUNTER ─────────────────────────────────────────
