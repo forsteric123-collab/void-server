@@ -3,16 +3,25 @@ const { WebSocketServer } = require('ws');
 const Database = require('better-sqlite3');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
-const fs = require('fs');
-const dbPath = process.env.DB_PATH || '/app/data/void.db';
-// Создать папку если не существует
-try { fs.mkdirSync(require('path').dirname(dbPath), { recursive: true }); } catch(e) {}
-const db = new Database(dbPath);
 app.use(express.json({ limit: '10mb' }));
 
-// ── Таблицы ──────────────────────────────────────────────
+// ── База данных ───────────────────────────────────────────
+const dbDir = process.env.DB_PATH
+    ? path.dirname(process.env.DB_PATH)
+    : path.join(__dirname, 'data');
+const dbFile = process.env.DB_PATH || path.join(dbDir, 'void.db');
+
+try { fs.mkdirSync(dbDir, { recursive: true }); } catch(e) {}
+
+const db = new Database(dbFile);
+// WAL режим — быстрее и надёжнее при конкурентных записях
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+// ── Таблицы ───────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     username    TEXT PRIMARY KEY,
@@ -39,237 +48,309 @@ db.exec(`
     room_key  TEXT UNIQUE
   );
   CREATE TABLE IF NOT EXISTS messages (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    chat_id    INTEGER,
-    text       TEXT,
-    is_sent    INTEGER DEFAULT 0,
-    time       TEXT,
-    sender     TEXT DEFAULT 'Аноним',
-    reply_to   TEXT DEFAULT '',
-    e2e        INTEGER DEFAULT 0,
-    created    DATETIME DEFAULT CURRENT_TIMESTAMP
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id   INTEGER NOT NULL,
+    text      TEXT DEFAULT '',
+    time      TEXT DEFAULT '',
+    sender    TEXT DEFAULT '',
+    reply_to  TEXT DEFAULT '',
+    is_file   INTEGER DEFAULT 0,
+    created   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
   );
+  CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created);
+  CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 `);
 
-// Миграции
-['room_key','avatar'].forEach(col => {
-  try { db.exec(`ALTER TABLE chats ADD COLUMN ${col} TEXT`); } catch(e){}
-});
-['sender','reply_to','e2e'].forEach(col => {
-  try { db.exec(`ALTER TABLE messages ADD COLUMN ${col} TEXT DEFAULT ""`); } catch(e){}
-});
-
 // Дефолтный общий чат
-const count = db.prepare('SELECT COUNT(*) as n FROM chats').get();
-if (count.n === 0) {
-  db.prepare("INSERT INTO chats (name, avatar, type, room_key) VALUES (?,?,?,?)")
-    .run('Общий чат', '💬', 'Чат', 'general');
+const chatCount = db.prepare('SELECT COUNT(*) as n FROM chats').get();
+if (chatCount.n === 0) {
+    db.prepare("INSERT INTO chats (name, avatar, type, room_key) VALUES (?,?,?,?)")
+        .run('Общий чат', '💬', 'Чат', 'general');
 }
 
 // ── Хелперы ───────────────────────────────────────────────
 function hashPass(pass) {
-  return crypto.createHash('sha256').update(pass + 'void_salt_2024').digest('hex');
+    return crypto.createHash('sha256').update(pass + 'void_salt_2024').digest('hex');
+}
+function sanitizeUser(u) {
+    if (!u) return null;
+    const { password, ...safe } = u;
+    return safe;
 }
 
 // ── Статика ───────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── AUTH API ──────────────────────────────────────────────
+// ── AUTH ──────────────────────────────────────────────────
 app.post('/api/register', (req, res) => {
-  const { username, name, password } = req.body;
-  if (!username || !name || !password) return res.status(400).json({ error: 'Заполните все поля' });
-  if (password.length < 6) return res.status(400).json({ error: 'Пароль минимум 6 символов' });
-  if (!/^[a-zа-я0-9_]+$/i.test(username)) return res.status(400).json({ error: 'Только буквы, цифры и _' });
-  const exists = db.prepare('SELECT username FROM users WHERE username = ?').get(username);
-  if (exists) return res.status(400).json({ error: 'Имя пользователя занято' });
-  db.prepare('INSERT INTO users (username, name, password) VALUES (?,?,?)')
-    .run(username, name, hashPass(password));
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-  res.json({ ok: true, user: sanitizeUser(user) });
+    try {
+        const { username, name, password } = req.body;
+        if (!username || !name || !password)
+            return res.status(400).json({ error: 'Заполните все поля' });
+        if (password.length < 6)
+            return res.status(400).json({ error: 'Пароль минимум 6 символов' });
+        if (!/^[a-zа-я0-9_]+$/i.test(username))
+            return res.status(400).json({ error: 'Только буквы, цифры и _' });
+        const exists = db.prepare('SELECT username FROM users WHERE username = ?').get(username);
+        if (exists) return res.status(400).json({ error: 'Имя пользователя занято' });
+        db.prepare('INSERT INTO users (username, name, password) VALUES (?,?,?)')
+            .run(username, name, hashPass(password));
+        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+        res.json({ ok: true, user: sanitizeUser(user) });
+    } catch(e) {
+        console.error('Register error:', e);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Заполните все поля' });
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-  if (!user) return res.status(401).json({ error: 'Пользователь не найден' });
-  if (user.password !== hashPass(password)) return res.status(401).json({ error: 'Неверный пароль' });
-  db.prepare('UPDATE users SET status = ?, last_seen = CURRENT_TIMESTAMP WHERE username = ?')
-    .run('online', username);
-  res.json({ ok: true, user: sanitizeUser(user) });
+    try {
+        const { username, password } = req.body;
+        if (!username || !password)
+            return res.status(400).json({ error: 'Заполните все поля' });
+        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+        if (!user) return res.status(401).json({ error: 'Пользователь не найден' });
+        if (user.password !== hashPass(password))
+            return res.status(401).json({ error: 'Неверный пароль' });
+        db.prepare('UPDATE users SET status=?, last_seen=CURRENT_TIMESTAMP WHERE username=?')
+            .run('online', username);
+        res.json({ ok: true, user: sanitizeUser(user) });
+    } catch(e) {
+        console.error('Login error:', e);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 app.post('/api/logout', (req, res) => {
-  const { username } = req.body;
-  if (username) db.prepare('UPDATE users SET status = ? WHERE username = ?').run('offline', username);
-  res.json({ ok: true });
+    try {
+        const { username } = req.body;
+        if (username)
+            db.prepare('UPDATE users SET status=?, last_seen=CURRENT_TIMESTAMP WHERE username=?')
+                .run('offline', username);
+        res.json({ ok: true });
+    } catch(e) { res.json({ ok: true }); }
 });
 
-// ── USERS API ─────────────────────────────────────────────
-// Поиск пользователей
+// ── USERS ─────────────────────────────────────────────────
 app.get('/api/users/search', (req, res) => {
-  const q = (req.query.q || '').toLowerCase().trim();
-  const exclude = req.query.exclude || '';
-  let users;
-  if (!q) {
-    users = db.prepare('SELECT * FROM users WHERE username != ? ORDER BY status DESC, last_seen DESC LIMIT 50')
-      .all(exclude);
-  } else {
-    users = db.prepare(`
-      SELECT * FROM users WHERE username != ? AND (
-        LOWER(username) LIKE ? OR
-        LOWER(name) LIKE ? OR
-        LOWER(city) LIKE ? OR
-        replace(replace(replace(phone,' ',''),'-',''),'+','') LIKE ?
-      ) ORDER BY status DESC, last_seen DESC LIMIT 30
-    `).all(exclude, `%${q}%`, `%${q}%`, `%${q}%`, `%${q.replace(/\D/g,'')}%`);
-  }
-  res.json(users.map(sanitizeUser));
+    try {
+        const q = (req.query.q || '').toLowerCase().trim();
+        const exclude = req.query.exclude || '';
+        let users;
+        if (!q) {
+            users = db.prepare(
+                'SELECT * FROM users WHERE username != ? ORDER BY CASE status WHEN ? THEN 0 ELSE 1 END, last_seen DESC LIMIT 50'
+            ).all(exclude, 'online');
+        } else {
+            users = db.prepare(`
+                SELECT * FROM users WHERE username != ? AND (
+                    LOWER(username) LIKE ? OR LOWER(name) LIKE ? OR
+                    LOWER(city) LIKE ? OR replace(replace(phone,'-',''),' ','') LIKE ?
+                ) ORDER BY CASE status WHEN 'online' THEN 0 ELSE 1 END LIMIT 30
+            `).all(exclude, `%${q}%`, `%${q}%`, `%${q}%`, `%${q.replace(/\D/g,'')}%`);
+        }
+        res.json(users.map(sanitizeUser));
+    } catch(e) {
+        console.error('Search error:', e);
+        res.json([]);
+    }
 });
 
-// Получить профиль пользователя
 app.get('/api/users/:username', (req, res) => {
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(req.params.username);
-  if (!user) return res.status(404).json({ error: 'Не найден' });
-  res.json(sanitizeUser(user));
+    try {
+        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(req.params.username);
+        if (!user) return res.status(404).json({ error: 'Не найден' });
+        res.json(sanitizeUser(user));
+    } catch(e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
-// Обновить профиль
 app.post('/api/users/:username/update', (req, res) => {
-  const { name, status, statusMsg, bio, birthday, city, website, job, phone, accent, avatar } = req.body;
-  db.prepare(`UPDATE users SET name=?, status=?, status_msg=?, bio=?, birthday=?, city=?, website=?, job=?, phone=?, accent=?, avatar=?, last_seen=CURRENT_TIMESTAMP WHERE username=?`)
-    .run(name||'', status||'online', statusMsg||'', bio||'', birthday||'', city||'', website||'', job||'', phone||'', accent||'#6b8afd', avatar||'', req.params.username);
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(req.params.username);
-  res.json({ ok: true, user: sanitizeUser(user) });
+    try {
+        const u = req.body;
+        db.prepare(`UPDATE users SET name=?,status=?,status_msg=?,bio=?,birthday=?,city=?,website=?,job=?,phone=?,accent=?,avatar=?,last_seen=CURRENT_TIMESTAMP WHERE username=?`)
+            .run(u.name||'', u.status||'online', u.status_msg||u.statusMsg||'', u.bio||'', u.birthday||'', u.city||'', u.website||'', u.job||'', u.phone||'', u.accent||'#6b8afd', u.avatar||'', req.params.username);
+        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(req.params.username);
+        res.json({ ok: true, user: sanitizeUser(user) });
+    } catch(e) {
+        console.error('Update error:', e);
+        res.status(500).json({ error: 'Ошибка' });
+    }
 });
 
-// Сменить юзернейм
-app.post('/api/users/:username/rename', (req, res) => {
-  const { newUsername } = req.body;
-  if (!newUsername || !/^[a-zа-я0-9_]+$/i.test(newUsername)) return res.status(400).json({ error: 'Некорректный юзернейм' });
-  const exists = db.prepare('SELECT username FROM users WHERE username = ?').get(newUsername);
-  if (exists) return res.status(400).json({ error: 'Занято' });
-  db.prepare('UPDATE users SET username = ? WHERE username = ?').run(newUsername, req.params.username);
-  res.json({ ok: true });
-});
-
-function sanitizeUser(u) {
-  const { password, ...safe } = u;
-  return safe;
-}
-
-// ── CHATS & MESSAGES API ──────────────────────────────────
+// ── CHATS ─────────────────────────────────────────────────
 app.get('/api/chats', (req, res) => {
-  res.json(db.prepare('SELECT * FROM chats').all());
+    try {
+        res.json(db.prepare("SELECT * FROM chats WHERE type != 'ЛС'").all());
+    } catch(e) { res.json([]); }
+});
+
+app.get('/api/my-dms', (req, res) => {
+    try {
+        const username = req.query.username;
+        if (!username) return res.json([]);
+        const dms = db.prepare("SELECT * FROM chats WHERE type='ЛС'").all();
+        const filtered = dms.filter(c => {
+            if (!c.room_key) return false;
+            const parts = c.room_key.replace('dm_', '').split('_');
+            return parts.includes(username);
+        });
+        res.json(filtered);
+    } catch(e) { res.json([]); }
 });
 
 app.get('/api/messages/:roomKey', (req, res) => {
-  const chat = db.prepare('SELECT id FROM chats WHERE room_key = ?').get(req.params.roomKey);
-  if (!chat) return res.json([]);
-  res.json(db.prepare(
-    'SELECT * FROM messages WHERE chat_id = ? ORDER BY created DESC LIMIT 100'
-  ).all(chat.id).reverse());
-});
-
-// Получить все ЛС чаты пользователя
-app.get('/api/my-dms', (req, res) => {
-  const username = req.query.username;
-  if (!username) return res.json([]);
-  // Ищем все комнаты где есть этот юзер в room_key
-  const dms = db.prepare(
-    "SELECT * FROM chats WHERE type = 'ЛС' AND room_key LIKE ?"
-  ).all('%' + username + '%');
-  // Фильтруем точнее — юзер должен быть в dm_user1_user2
-  const filtered = dms.filter(c => {
-    if (!c.room_key) return false;
-    const parts = c.room_key.replace('dm_', '').split('_');
-    return parts.includes(username);
-  });
-  res.json(filtered);
+    try {
+        const chat = db.prepare('SELECT id FROM chats WHERE room_key=?').get(req.params.roomKey);
+        if (!chat) return res.json([]);
+        const msgs = db.prepare(
+            'SELECT * FROM messages WHERE chat_id=? ORDER BY created DESC LIMIT 100'
+        ).all(chat.id).reverse();
+        res.json(msgs);
+    } catch(e) { res.json([]); }
 });
 
 app.post('/api/dm', (req, res) => {
-  const { user1, user2 } = req.body;
-  if (!user1 || !user2) return res.status(400).json({ error: 'нужны user1 и user2' });
-  const roomKey = 'dm_' + [user1, user2].sort().join('_');
-  let chat = db.prepare('SELECT * FROM chats WHERE room_key = ?').get(roomKey);
-  if (!chat) {
-    const info = db.prepare("INSERT INTO chats (name, avatar, type, room_key) VALUES (?,?,?,?)")
-      .run(user2, '👤', 'ЛС', roomKey);
-    chat = { id: info.lastInsertRowid, name: user2, avatar: '👤', type: 'ЛС', room_key: roomKey };
-  }
-  res.json(chat);
+    try {
+        const { user1, user2 } = req.body;
+        if (!user1 || !user2) return res.status(400).json({ error: 'нужны user1 и user2' });
+        const roomKey = 'dm_' + [user1, user2].sort().join('_');
+        let chat = db.prepare('SELECT * FROM chats WHERE room_key=?').get(roomKey);
+        if (!chat) {
+            const info = db.prepare("INSERT INTO chats (name,avatar,type,room_key) VALUES (?,?,?,?)")
+                .run(user2, '👤', 'ЛС', roomKey);
+            chat = { id: info.lastInsertRowid, name: user2, avatar: '👤', type: 'ЛС', room_key: roomKey };
+        }
+        res.json(chat);
+    } catch(e) {
+        console.error('DM error:', e);
+        res.status(500).json({ error: 'Ошибка' });
+    }
 });
 
-// ── WebSocket ─────────────────────────────────────────────
+// ── WEBSOCKET ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => console.log(`Сервер: http://localhost:${PORT}`));
+const server = app.listen(PORT, () => console.log(`Сервер запущен: http://localhost:${PORT}`));
 const wss = new WebSocketServer({ server });
 
-const rooms = new Map();  // roomKey → Set<ws>
-const online = new Map(); // ws → { username, roomKey }
+// roomKey → Set<ws>
+const rooms = new Map();
+// ws → { username, rooms: Set<roomKey> }
+const clients = new Map();
 
 wss.on('connection', (ws) => {
-  ws.on('message', (raw) => {
-    try {
-      const data = JSON.parse(raw);
+    clients.set(ws, { username: null, rooms: new Set() });
 
-      if (data.type === 'join') {
-        const prev = online.get(ws);
-        if (prev) { const r = rooms.get(prev.roomKey); if (r) r.delete(ws); }
-        online.set(ws, { username: data.username, roomKey: data.roomKey });
-        if (!rooms.has(data.roomKey)) rooms.set(data.roomKey, new Set());
-        rooms.get(data.roomKey).add(ws);
-        ws.send(JSON.stringify({ type: 'joined', roomKey: data.roomKey }));
+    ws.on('message', (raw) => {
+        try {
+            const data = JSON.parse(raw);
 
-        // Уведомить всех об онлайн статусе
-        broadcastAll({ type: 'user_online', username: data.username });
-        return;
-      }
+            // Войти в комнату
+            if (data.type === 'join') {
+                const { username, roomKey } = data;
+                if (!username || !roomKey) return;
 
-      if (data.type === 'message') {
-        let chat = db.prepare('SELECT id FROM chats WHERE room_key = ?').get(data.roomKey);
-        if (!chat) return;
-        const info = db.prepare(
-          'INSERT INTO messages (chat_id, text, is_sent, time, sender, reply_to, e2e) VALUES (?,?,?,?,?,?,?)'
-        ).run(chat.id, data.text, 1, data.time, data.sender||'', JSON.stringify(data.replyTo||null), data.e2e ? 1 : 0);
+                const clientInfo = clients.get(ws);
+                clientInfo.username = username;
+                clientInfo.rooms.add(roomKey);
 
-        const broadcast = JSON.stringify({
-          type: 'message',
-          msg: { id: info.lastInsertRowid, room_key: data.roomKey,
-                 text: data.text, time: data.time, sender: data.sender,
-                 replyTo: data.replyTo, e2e: data.e2e, tmpId: data.tmpId,
-                 isFile: data.isFile || false }
-        });
-        const room = rooms.get(data.roomKey);
-        if (room) room.forEach(c => { if (c.readyState === 1) c.send(broadcast); });
-      }
+                if (!rooms.has(roomKey)) rooms.set(roomKey, new Set());
+                rooms.get(roomKey).add(ws);
 
-      if (data.type === 'typing') {
-        const room = rooms.get(data.roomKey);
-        if (room) room.forEach(c => {
-          if (c !== ws && c.readyState === 1)
-            c.send(JSON.stringify({ type: 'typing', username: data.username, roomKey: data.roomKey }));
-        });
-      }
+                ws.send(JSON.stringify({ type: 'joined', roomKey }));
 
-    } catch(e) { console.error('WS:', e.message); }
-  });
+                // Обновить статус онлайн
+                try {
+                    db.prepare('UPDATE users SET status=?, last_seen=CURRENT_TIMESTAMP WHERE username=?')
+                        .run('online', username);
+                    broadcastAll({ type: 'user_online', username });
+                } catch(e) {}
+                return;
+            }
 
-  ws.on('close', () => {
-    const info = online.get(ws);
-    if (info) {
-      const room = rooms.get(info.roomKey);
-      if (room) room.delete(ws);
-      db.prepare('UPDATE users SET status = ?, last_seen = CURRENT_TIMESTAMP WHERE username = ?')
-        .run('offline', info.username);
-      broadcastAll({ type: 'user_offline', username: info.username });
-    }
-    online.delete(ws);
-  });
+            // Сообщение
+            if (data.type === 'message') {
+                const { roomKey, text, sender, time, tmpId, isFile, replyTo } = data;
+                if (!roomKey || !sender) return;
+
+                const chat = db.prepare('SELECT id FROM chats WHERE room_key=?').get(roomKey);
+                if (!chat) return;
+
+                const info = db.prepare(
+                    'INSERT INTO messages (chat_id,text,time,sender,reply_to,is_file) VALUES (?,?,?,?,?,?)'
+                ).run(chat.id, text||'', time||'', sender, JSON.stringify(replyTo||null), isFile ? 1 : 0);
+
+                const broadcast = JSON.stringify({
+                    type: 'message',
+                    msg: {
+                        id: info.lastInsertRowid,
+                        room_key: roomKey,
+                        text: text||'',
+                        time: time||'',
+                        sender,
+                        replyTo: replyTo || null,
+                        isFile: isFile || false,
+                        tmpId: tmpId || null
+                    }
+                });
+
+                const room = rooms.get(roomKey);
+                if (room) {
+                    room.forEach(c => {
+                        if (c.readyState === 1) c.send(broadcast);
+                    });
+                }
+                return;
+            }
+
+            // Typing индикатор
+            if (data.type === 'typing') {
+                const room = rooms.get(data.roomKey);
+                if (room) room.forEach(c => {
+                    if (c !== ws && c.readyState === 1)
+                        c.send(JSON.stringify({ type: 'typing', username: data.username, roomKey: data.roomKey }));
+                });
+            }
+
+        } catch(err) {
+            console.error('WS message error:', err.message);
+        }
+    });
+
+    ws.on('close', () => {
+        const clientInfo = clients.get(ws);
+        if (clientInfo) {
+            // Удалить из всех комнат
+            clientInfo.rooms.forEach(roomKey => {
+                const room = rooms.get(roomKey);
+                if (room) { room.delete(ws); if (room.size === 0) rooms.delete(roomKey); }
+            });
+            // Обновить статус офлайн
+            if (clientInfo.username) {
+                try {
+                    db.prepare('UPDATE users SET status=?, last_seen=CURRENT_TIMESTAMP WHERE username=?')
+                        .run('offline', clientInfo.username);
+                    broadcastAll({ type: 'user_offline', username: clientInfo.username });
+                } catch(e) {}
+            }
+        }
+        clients.delete(ws);
+    });
+
+    ws.on('error', (err) => {
+        console.error('WS error:', err.message);
+    });
 });
 
 function broadcastAll(msg) {
-  const str = JSON.stringify(msg);
-  wss.clients.forEach(c => { if (c.readyState === 1) c.send(str); });
+    const str = JSON.stringify(msg);
+    wss.clients.forEach(c => { if (c.readyState === 1) c.send(str); });
 }
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('Завершение работы...');
+    db.close();
+    process.exit(0);
+});

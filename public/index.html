@@ -1829,132 +1829,190 @@ function loadMyDMs() {
         .catch(() => {});
 }
 
-// currentRoomKey — ключ комнаты в которой сейчас находимся
+// ── WEBSOCKET & SERVER CONNECTION ─────────────────────────
 let currentRoomKey = null;
+let wsReconnectTimer = null;
+let wsConnecting = false;
 
 function connectToServer() {
-  fetch('/api/chats')
-    .then(r => r.json())
-    .then(serverChats => {
-      if (!serverChats.length) return;
-      useServer = true;
+    fetch('/api/chats')
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(serverChats => {
+            useServer = true;
+            // Добавить серверные публичные чаты (не ЛС) без дублей
+            serverChats.forEach(c => {
+                const alreadyExists = Object.values(chats).some(ch => ch.roomKey === c.room_key);
+                if (!alreadyExists) {
+                    const cid = 'srv_' + c.id;
+                    chats[cid] = {
+                        name: c.name, avatar: c.avatar || '💬',
+                        type: c.type || 'Чат', unread: 0,
+                        updated: Date.now(), pinned: null,
+                        messages: [], roomKey: c.room_key, isServer: true
+                    };
+                }
+            });
+            // Загрузить ЛС
+            return loadMyDMs();
+        })
+        .then(() => {
+            renderChats();
+            connectWS();
+            // Открыть первый серверный чат
+            const firstSrv = Object.keys(chats).find(id => chats[id].isServer);
+            if (firstSrv && !activeId) switchChat(firstSrv);
+        })
+        .catch(err => {
+            console.warn('Сервер недоступен, работаем локально:', err);
+        });
+}
 
-      // Добавляем серверные чаты (общие, не ЛС) в список
-      serverChats.forEach(c => {
-        // Проверяем по roomKey чтобы не дублировать
-        const existingId = Object.keys(chats).find(id => chats[id].roomKey === c.room_key);
-        if (!existingId) {
-          const cid = 'srv_' + c.id;
-          chats[cid] = {
-            name: c.name,
-            avatar: c.avatar || '💬',
-            type: c.type || 'Чат',
-            unread: 0,
-            updated: Date.now(),
-            pinned: null,
-            messages: [],
-            roomKey: c.room_key,
-            isServer: true
-          };
-        }
-      });
-
-        connectWS();
-      renderChats();
-
-      // Загрузить все ЛС чаты текущего пользователя с сервера
-      loadMyDMs();
-
-      // Переключаемся на первый серверный чат
-      const firstSrv = Object.keys(chats).find(id => chats[id].isServer);
-      if (firstSrv) {
-        switchChat(firstSrv);
-      }
-    })
-    .catch(() => {
-      console.log('Сервер недоступен, работаем локально');
-    });
+function loadMyDMs() {
+    return fetch('/api/my-dms?username=' + currentUsername)
+        .then(r => r.json())
+        .then(dms => {
+            dms.forEach(chat => {
+                const alreadyExists = Object.values(chats).some(ch => ch.roomKey === chat.room_key);
+                if (alreadyExists) return;
+                const cid = 'dm_' + chat.id;
+                const parts = (chat.room_key || '').replace('dm_', '').split('_');
+                const dmWith = parts.find(p => p !== currentUsername) || '';
+                const localUsers = getUsers();
+                const u = localUsers[dmWith] || {};
+                const contacts = getContacts();
+                const ct = contacts[dmWith];
+                const displayName = (ct && ct.nick) || u.name || dmWith;
+                chats[cid] = {
+                    name: displayName,
+                    avatar: displayName ? displayName[0].toUpperCase() : '?',
+                    avatarImg: u.avatar || null,
+                    type: 'ЛС', unread: 0, updated: Date.now(),
+                    pinned: null, messages: [],
+                    roomKey: chat.room_key, dmWith: dmWith, isServer: true
+                };
+            });
+        })
+        .catch(() => {});
 }
 
 function connectWS() {
-  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-  ws = new WebSocket(proto + location.host);
+    // Не создавать новое соединение если уже есть активное или идёт подключение
+    if (wsConnecting) return;
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
-  ws.onopen = () => {
-    console.log('WebSocket подключён');
-    // Войти в текущую комнату если есть
-    if (currentRoomKey) joinRoom(currentRoomKey);
-  };
+    wsConnecting = true;
+    clearTimeout(wsReconnectTimer);
 
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
+    const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    ws = new WebSocket(proto + location.host);
 
-    if (data.type === 'joined') {
-      console.log('Вошли в комнату:', data.roomKey);
-      return;
-    }
+    ws.onopen = () => {
+        wsConnecting = false;
+        console.log('WS подключён');
+        // Войти во все комнаты где есть чаты
+        Object.values(chats).forEach(c => {
+            if (c.roomKey) _joinRoom(c.roomKey);
+        });
+    };
 
-    if (data.type === 'message') {
-      const m = data.msg;
-      const rk = m.room_key;
-
-      // Найти чат по roomKey
-      const cid = Object.keys(chats).find(id => chats[id].roomKey === rk);
-      if (!cid) return;
-
-      const isMine = m.sender === currentUsername;
-
-      if (isMine) {
-        const tmpIdx = chats[cid].messages.findIndex(x => x.id === m.tmpId);
-        if (tmpIdx !== -1) {
-          chats[cid].messages[tmpIdx].id = m.id;
-        } else {
-          const exists = chats[cid].messages.find(x => x.id === m.id);
-          if (!exists) {
-            chats[cid].messages.push({ id: m.id, text: m.text, type: 'sent', time: m.time, sender: m.sender });
-          }
+    ws.onmessage = (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.type === 'joined') return;
+            if (data.type === 'user_online')  { _updateUserStatus(data.username, 'online');  return; }
+            if (data.type === 'user_offline') { _updateUserStatus(data.username, 'offline'); return; }
+            if (data.type === 'message')      { _handleIncomingMsg(data.msg); return; }
+        } catch(err) {
+            console.error('WS parse error:', err);
         }
-      } else {
-        const exists = chats[cid].messages.find(x => x.id === m.id);
-        if (!exists) {
-          if (m.isFile) {
-            chats[cid].messages.push({ id: m.id, fileData: m.text, isFile: true, type: 'received', time: m.time, sender: m.sender });
-          } else {
-            chats[cid].messages.push({ id: m.id, text: m.text, type: 'received', time: m.time, sender: m.sender, replyTo: m.replyTo || null });
-          }
-        }
-      }
+    };
 
-      if (cid === activeId) renderMsgs();
-      else chats[cid].unread = (chats[cid].unread || 0) + 1;
-      chats[cid].updated = Date.now();
-      renderChats();
-    }
-  };
+    ws.onerror = (err) => {
+        wsConnecting = false;
+        console.warn('WS ошибка:', err);
+    };
 
-  ws.onclose = () => setTimeout(connectWS, 3000);
+    ws.onclose = () => {
+        wsConnecting = false;
+        console.log('WS закрыт, переподключение через 3с...');
+        wsReconnectTimer = setTimeout(connectWS, 3000);
+    };
+}
+
+function _joinRoom(roomKey) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'join', username: currentUsername, roomKey }));
 }
 
 function joinRoom(roomKey) {
-  if (!ws || ws.readyState !== 1) return;
-  ws.send(JSON.stringify({ type: 'join', username: currentUsername, roomKey }));
-  currentRoomKey = roomKey;
+    currentRoomKey = roomKey;
+    _joinRoom(roomKey);
+}
+
+function _handleIncomingMsg(m) {
+    const rk = m.room_key;
+    const cid = Object.keys(chats).find(id => chats[id].roomKey === rk);
+    if (!cid) return;
+
+    const isMine = m.sender === currentUsername;
+
+    if (isMine) {
+        // Заменить временный id на серверный
+        const tmpIdx = chats[cid].messages.findIndex(x => x.tmpId === m.tmpId);
+        if (tmpIdx !== -1) {
+            chats[cid].messages[tmpIdx].id = m.id;
+            delete chats[cid].messages[tmpIdx].tmpId;
+        } else {
+            // Проверить на дубль
+            if (!chats[cid].messages.find(x => x.id === m.id)) {
+                chats[cid].messages.push(_buildMsg(m, 'sent'));
+            }
+        }
+    } else {
+        if (!chats[cid].messages.find(x => x.id === m.id)) {
+            chats[cid].messages.push(_buildMsg(m, 'received'));
+            if (cid !== activeId) chats[cid].unread = (chats[cid].unread || 0) + 1;
+        }
+    }
+
+    chats[cid].updated = Date.now();
+    if (cid === activeId) renderMsgs();
+    renderChats();
+    saveChats();
+}
+
+function _buildMsg(m, type) {
+    if (m.isFile) return { id: m.id, fileData: m.text, isFile: true, type, time: m.time, sender: m.sender };
+    return { id: m.id, text: m.text, type, time: m.time, sender: m.sender, replyTo: m.replyTo || null };
+}
+
+function _updateUserStatus(username, status) {
+    const users = getUsers();
+    if (users[username]) {
+        users[username].status = status;
+        saveUsers(users);
+        renderChats(); // обновить аватарки с онлайн-точкой
+    }
 }
 
 // Загрузить историю комнаты с сервера
 function loadRoomHistory(cid, roomKey) {
-  fetch('/api/messages/' + roomKey)
-    .then(r => r.json())
-    .then(msgs => {
-      chats[cid].messages = msgs.map(m => ({
-        id: m.id,
-        text: m.text,
-        type: m.sender === currentUsername ? 'sent' : 'received',
-        time: m.time || '00:00',
-        sender: m.sender
-      }));
-      renderMsgs();
-    });
+    fetch('/api/messages/' + roomKey)
+        .then(r => r.json())
+        .then(msgs => {
+            chats[cid].messages = msgs.map(m => ({
+                id: m.id,
+                text: m.isFile ? undefined : m.text,
+                fileData: m.isFile ? m.text : undefined,
+                isFile: m.isFile || false,
+                type: m.sender === currentUsername ? 'sent' : 'received',
+                time: m.time || '00:00',
+                sender: m.sender
+            }));
+            if (cid === activeId) renderMsgs();
+            saveChats();
+        })
+        .catch(() => {});
 }
 // ── STORAGE HELPERS ──────────────────────────────────────
 // Safe storage — falls back to memory if localStorage blocked
@@ -2205,8 +2263,12 @@ function initApp(username, userData) {
 function now() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+let _saveTimer = null;
 function saveChats() {
-    Store.set(`void_chats_${currentUsername}`, chats);
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+        Store.set(`void_chats_${currentUsername}`, chats);
+    }, 300);
 }
 
 // ── CHATS LIST ───────────────────────────────────────────
@@ -2540,7 +2602,7 @@ function attachFile(input) {
 
         // Отправляем через WebSocket если есть соединение
         const activeRoomKey = chats[activeId]?.roomKey;
-        if (useServer && ws && ws.readyState === 1 && activeRoomKey) {
+        if (useServer && ws && ws.readyState === WebSocket.OPEN && activeRoomKey) {
             ws.send(JSON.stringify({
                 type: 'message',
                 roomKey: activeRoomKey,
