@@ -1800,7 +1800,9 @@ function loadMyDMs() {
         .then(dms => {
             dms.forEach(chat => {
                 const cid = 'dm_' + chat.id;
-                if (!chats[cid]) {
+                // Проверяем по roomKey чтобы не дублировать
+                const existDM = Object.keys(chats).find(id => chats[id].roomKey === chat.room_key);
+                if (!existDM) {
                     // Определяем собеседника из room_key
                     const parts = (chat.room_key || '').replace('dm_','').split('_');
                     const dmWith = parts.find(p => p !== currentUsername) || '';
@@ -1839,8 +1841,10 @@ function connectToServer() {
 
       // Добавляем серверные чаты (общие, не ЛС) в список
       serverChats.forEach(c => {
-        const cid = 'srv_' + c.id;
-        if (!chats[cid]) {
+        // Проверяем по roomKey чтобы не дублировать
+        const existingId = Object.keys(chats).find(id => chats[id].roomKey === c.room_key);
+        if (!existingId) {
+          const cid = 'srv_' + c.id;
           chats[cid] = {
             name: c.name,
             avatar: c.avatar || '💬',
@@ -1913,7 +1917,11 @@ function connectWS() {
       } else {
         const exists = chats[cid].messages.find(x => x.id === m.id);
         if (!exists) {
-          chats[cid].messages.push({ id: m.id, text: m.text, type: 'received', time: m.time, sender: m.sender, replyTo: m.replyTo || null });
+          if (m.isFile) {
+            chats[cid].messages.push({ id: m.id, fileData: m.text, isFile: true, type: 'received', time: m.time, sender: m.sender });
+          } else {
+            chats[cid].messages.push({ id: m.id, text: m.text, type: 'received', time: m.time, sender: m.sender, replyTo: m.replyTo || null });
+          }
         }
       }
 
@@ -2506,15 +2514,47 @@ function clearHistory() {
 function attachFile(input) {
     const file = input.files[0];
     if (!file) return;
+
+    // Проверка размера — максимум 2МБ
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('Файл слишком большой. Максимум 2МБ');
+        input.value = '';
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = e => {
-        chats[activeId].messages.push({ id: Date.now(), type: 'sent', time: now(), fileData: e.target.result, isFile: true });
+        const fileData = e.target.result;
+        const tmpId = Date.now();
+
+        // Добавляем локально
+        chats[activeId].messages.push({
+            id: tmpId, type: 'sent', time: now(),
+            fileData: fileData, isFile: true,
+            sender: currentUsername, tmpId: tmpId
+        });
         chats[activeId].updated = Date.now();
         renderMsgs();
         renderChats();
         saveChats();
+
+        // Отправляем через WebSocket если есть соединение
+        const activeRoomKey = chats[activeId]?.roomKey;
+        if (useServer && ws && ws.readyState === 1 && activeRoomKey) {
+            ws.send(JSON.stringify({
+                type: 'message',
+                roomKey: activeRoomKey,
+                text: fileData,          // base64 картинки
+                is_sent: true,
+                time: now(),
+                sender: currentUsername,
+                tmpId: tmpId,
+                isFile: true
+            }));
+        }
     };
     reader.readAsDataURL(file);
+    input.value = ''; // сбросить input чтобы можно было отправить тот же файл снова
 }
 function openLightbox(src) {
     document.getElementById('lightboxImg').src = src;

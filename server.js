@@ -238,7 +238,8 @@ wss.on('connection', (ws) => {
           type: 'message',
           msg: { id: info.lastInsertRowid, room_key: data.roomKey,
                  text: data.text, time: data.time, sender: data.sender,
-                 replyTo: data.replyTo, e2e: data.e2e, tmpId: data.tmpId }
+                 replyTo: data.replyTo, e2e: data.e2e, tmpId: data.tmpId,
+                 isFile: data.isFile || false }
         });
         const room = rooms.get(data.roomKey);
         if (room) room.forEach(c => { if (c.readyState === 1) c.send(broadcast); });
