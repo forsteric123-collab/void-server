@@ -23,6 +23,37 @@ db.pragma('foreign_keys = ON');
 
 // ── Таблицы ───────────────────────────────────────────────
 db.exec(`
+  CREATE TABLE IF NOT EXISTS groups (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    avatar     TEXT DEFAULT '💬',
+    avatar_img TEXT DEFAULT '',
+    type       TEXT DEFAULT 'Чат',
+    owner      TEXT NOT NULL,
+    desc       TEXT DEFAULT '',
+    perms      TEXT DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS group_members (
+    group_id INTEGER,
+    username TEXT,
+    role     TEXT DEFAULT 'member',
+    PRIMARY KEY(group_id, username)
+  );
+  CREATE TABLE IF NOT EXISTS group_messages (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id  INTEGER,
+    text      TEXT DEFAULT '',
+    time      TEXT DEFAULT '',
+    sender    TEXT DEFAULT '',
+    reply_to  TEXT DEFAULT '',
+    is_file   INTEGER DEFAULT 0,
+    created   DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_gm_group ON group_messages(group_id);
+  CREATE INDEX IF NOT EXISTS idx_members_user ON group_members(username);
+`);
+
   CREATE TABLE IF NOT EXISTS users (
     username    TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
@@ -229,6 +260,86 @@ app.post('/api/dm', (req, res) => {
     }
 });
 
+// ── GROUPS API ───────────────────────────────────────────
+
+// Создать группу
+app.post('/api/groups', (req, res) => {
+    try {
+        const { name, avatar, type, owner } = req.body;
+        if (!name || !owner) return res.status(400).json({ error: 'нужны name и owner' });
+        const info = db.prepare("INSERT INTO groups (name,avatar,type,owner) VALUES (?,?,?,?)")
+            .run(name, avatar||'💬', type||'Чат', owner);
+        db.prepare("INSERT INTO group_members (group_id,username,role) VALUES (?,?,?)")
+            .run(info.lastInsertRowid, owner, 'owner');
+        res.json({ id: info.lastInsertRowid, name, avatar, type, owner });
+    } catch(e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Получить группы пользователя
+app.get('/api/groups', (req, res) => {
+    try {
+        const username = req.query.username;
+        if (!username) return res.json([]);
+        const groups = db.prepare(`
+            SELECT g.*, GROUP_CONCAT(gm.username) as members_str,
+                   GROUP_CONCAT(gm.role) as roles_str
+            FROM groups g
+            JOIN group_members gm ON g.id = gm.group_id
+            WHERE g.id IN (SELECT group_id FROM group_members WHERE username=?)
+            GROUP BY g.id
+        `).all(username);
+        res.json(groups.map(g => ({
+            ...g,
+            members: g.members_str ? g.members_str.split(',') : [],
+            roles: g.roles_str ? g.roles_str.split(',') : []
+        })));
+    } catch(e) { res.json([]); }
+});
+
+// Добавить участника
+app.post('/api/groups/:id/members', (req, res) => {
+    try {
+        const { username, role } = req.body;
+        db.prepare("INSERT OR IGNORE INTO group_members (group_id,username,role) VALUES (?,?,?)")
+            .run(req.params.id, username, role||'member');
+        // Уведомить всех в группе через WS
+        const roomKey = 'group_' + req.params.id;
+        const msg = JSON.stringify({ type: 'group_update', groupId: Number(req.params.id) });
+        wss.clients.forEach(c => { if (c.readyState === 1) c.send(msg); });
+        res.json({ ok: true });
+    } catch(e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Обновить роль
+app.post('/api/groups/:id/role', (req, res) => {
+    try {
+        const { username, role } = req.body;
+        db.prepare("UPDATE group_members SET role=? WHERE group_id=? AND username=?")
+            .run(role, req.params.id, username);
+        res.json({ ok: true });
+    } catch(e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// Обновить группу
+app.post('/api/groups/:id/update', (req, res) => {
+    try {
+        const { name, avatar, avatarImg, desc } = req.body;
+        db.prepare("UPDATE groups SET name=?,avatar=?,avatar_img=?,desc=? WHERE id=?")
+            .run(name||'', avatar||'💬', avatarImg||'', desc||'', req.params.id);
+        res.json({ ok: true });
+    } catch(e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+// История сообщений группы
+app.get('/api/groups/:id/messages', (req, res) => {
+    try {
+        const msgs = db.prepare(
+            'SELECT * FROM messages WHERE chat_id=? ORDER BY created DESC LIMIT 100'
+        ).all(req.params.id).reverse();
+        res.json(msgs);
+    } catch(e) { res.json([]); }
+});
+
 // ── WEBSOCKET ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`Сервер запущен: http://localhost:${PORT}`));
@@ -331,6 +442,19 @@ wss.on('connection', (ws) => {
             // Ping от клиента — отвечаем pong
             if (data.type === 'ping') {
                 ws.send(JSON.stringify({ type: 'pong' }));
+                return;
+            }
+
+            // Обновление группы
+            if (data.type === 'group_join') {
+                // Войти в комнату группы
+                const rk = 'group_' + data.groupId;
+                const clientInfo2 = clients.get(ws);
+                if (clientInfo2) {
+                    clientInfo2.rooms.add(rk);
+                    if (!rooms.has(rk)) rooms.set(rk, new Set());
+                    rooms.get(rk).add(ws);
+                }
                 return;
             }
 

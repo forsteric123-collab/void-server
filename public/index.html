@@ -2009,13 +2009,12 @@ function connectToServer() {
                     };
                 }
             });
-            // Загрузить ЛС
-            return loadMyDMs();
+            // Загрузить ЛС и группы
+            return Promise.all([loadMyDMs(), loadMyGroups()]);
         })
         .then(() => {
             renderChats();
             connectWS();
-            // Открыть первый серверный чат
             const firstSrv = Object.keys(chats).find(id => chats[id].isServer);
             if (firstSrv && !activeId) switchChat(firstSrv);
         })
@@ -2052,6 +2051,40 @@ function loadMyDMs() {
         .catch(() => {});
 }
 
+// Загрузить группы пользователя с сервера
+function loadMyGroups() {
+    if (!useServer) return Promise.resolve();
+    return fetch('/api/groups?username=' + currentUsername)
+        .then(r => r.json())
+        .then(groups => {
+            groups.forEach(g => {
+                const roomKey = 'group_' + g.id;
+                const alreadyExists = Object.values(chats).some(c => c.roomKey === roomKey);
+                if (alreadyExists) return;
+                const cid = String(g.id);
+                chats[cid] = {
+                    name: g.name, avatar: g.avatar || '💬',
+                    avatarImg: g.avatar_img || null,
+                    type: g.type || 'Чат',
+                    unread: 0, updated: Date.now(),
+                    pinned: null, desc: g.desc || '',
+                    owner: g.owner,
+                    members: g.members || [],
+                    admins: g.roles
+                        ? g.members.filter((m,i) => g.roles[i] === 'admin')
+                        : [],
+                    perms: { write: true, invite: true, readonly: false },
+                    roomKey: roomKey,
+                    groupId: g.id,
+                    isServer: true,
+                    messages: []
+                };
+            });
+            renderChats();
+        })
+        .catch(() => {});
+}
+
 function connectWS() {
     // Не создавать новое соединение если уже есть активное или идёт подключение
     if (wsConnecting) return;
@@ -2069,7 +2102,13 @@ function connectWS() {
 
         // Войти во все комнаты где есть чаты
         Object.values(chats).forEach(c => {
-            if (c.roomKey) _joinRoom(c.roomKey);
+            if (c.roomKey) {
+                _joinRoom(c.roomKey);
+                // Для групп — отправить group_join
+                if (c.groupId) {
+                    ws.send(JSON.stringify({ type: 'group_join', groupId: c.groupId }));
+                }
+            }
         });
 
         // Подгрузить ЛС с сервера и войти в их комнаты
@@ -2098,6 +2137,12 @@ function connectWS() {
         try {
             const data = JSON.parse(e.data);
             if (data.type === 'joined') return;
+            if (data.type === 'pong') return;
+            if (data.type === 'group_update') {
+                // Перезагрузить группы
+                loadMyGroups().then(() => renderChats());
+                return;
+            }
             if (data.type === 'user_online')  { _updateUserStatus(data.username, 'online');  return; }
             if (data.type === 'user_offline') { _updateUserStatus(data.username, 'offline'); return; }
             if (data.type === 'message')      { _handleIncomingMsg(data.msg); return; }
@@ -2902,25 +2947,62 @@ function openLightbox(src) {
 function createChat() {
     const name = document.getElementById('newName').value.trim();
     if (!name) return;
-    const id = Date.now();
-    chats[id] = {
-        name,
-        avatar: document.getElementById('newEmoji').value.trim() || '💬',
-        type: document.getElementById('newType').value,
-        unread: 0, updated: Date.now(), pinned: null,
-        desc: '',
-        owner: currentUsername,
-        admins: [],
-        members: [currentUsername],
-        perms: { write: true, invite: true, readonly: false },
-        messages: [{ id: Date.now(), type: 'received',
-            text: `👑 ${currentUsername} создал${document.getElementById('newType').value === 'Канал' ? ' канал' : ' чат'} «${name}»`,
-            time: now(), sender: 'system' }]
-    };
+    const avatar = document.getElementById('newEmoji').value.trim() || '💬';
+    const type = document.getElementById('newType').value;
     document.getElementById('newName').value = '';
     closeOverlay('createOverlay');
-    switchChat(id);
-    saveChats();
+
+    if (useServer) {
+        fetch('/api/groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, avatar, type, owner: currentUsername })
+        })
+        .then(r => r.json())
+        .then(group => {
+            const roomKey = 'group_' + group.id;
+            const cid = String(group.id);
+            chats[cid] = {
+                name, avatar, type,
+                unread: 0, updated: Date.now(), pinned: null,
+                desc: '', owner: currentUsername,
+                admins: [], members: [currentUsername],
+                perms: { write: true, invite: true, readonly: false },
+                roomKey: roomKey,
+                groupId: group.id,
+                isServer: true,
+                messages: [{ id: Date.now(), type: 'received',
+                    text: `👑 ${currentUsername} создал${type === 'Канал' ? ' канал' : ' чат'} «${name}»`,
+                    time: now(), sender: 'system' }]
+            };
+            renderChats();
+            switchChat(cid);
+            saveChats();
+            // Войти в комнату группы
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'group_join', groupId: group.id }));
+                _joinRoom(roomKey);
+            }
+        })
+        .catch(() => _createChatLocal(name, avatar, type));
+    } else {
+        _createChatLocal(name, avatar, type);
+    }
+}
+
+function _createChatLocal(name, avatar, type) {
+    const id = String(Date.now());
+    chats[id] = {
+        name, avatar, type,
+        unread: 0, updated: Date.now(), pinned: null,
+        desc: '', owner: currentUsername,
+        admins: [], members: [currentUsername],
+        perms: { write: true, invite: true, readonly: false },
+        messages: [{ id: Date.now(), type: 'received',
+            text: `👑 ${currentUsername} создал${type === 'Канал' ? ' канал' : ' чат'} «${name}»`,
+            time: now(), sender: 'system' }]
+    };
+    renderChats(); switchChat(id); saveChats();
 }
 function delChat(id, e) {
     e.stopPropagation();
