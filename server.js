@@ -288,7 +288,14 @@ wss.on('connection', (ws) => {
                 const { roomKey, text, sender, time, tmpId, isFile, replyTo, fileName, fileType, caption } = data;
                 if (!roomKey || !sender) return;
 
-                const chat = db.prepare('SELECT id FROM chats WHERE room_key=?').get(roomKey);
+                let chat = db.prepare('SELECT id FROM chats WHERE room_key=?').get(roomKey);
+                // Если комната не существует — создать (для ЛС)
+                if (!chat && roomKey.startsWith('dm_')) {
+                    const parts = roomKey.replace('dm_', '').split('_');
+                    const info = db.prepare("INSERT OR IGNORE INTO chats (name,avatar,type,room_key) VALUES (?,?,?,?)")
+                        .run(parts[1] || 'ЛС', '👤', 'ЛС', roomKey);
+                    chat = db.prepare('SELECT id FROM chats WHERE room_key=?').get(roomKey);
+                }
                 if (!chat) return;
 
                 const info = db.prepare(

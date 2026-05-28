@@ -1951,11 +1951,26 @@ function connectWS() {
     ws.onopen = () => {
         wsConnecting = false;
         console.log('WS подключён');
+
         // Войти во все комнаты где есть чаты
         Object.values(chats).forEach(c => {
             if (c.roomKey) _joinRoom(c.roomKey);
         });
-        // Ping каждые 25 сек чтобы Railway не разрывал соединение
+
+        // Подгрузить ЛС с сервера и войти в их комнаты
+        if (useServer) {
+            fetch('/api/my-dms?username=' + currentUsername)
+                .then(r => r.json())
+                .then(dms => {
+                    dms.forEach(chat => {
+                        // Войти в комнату даже если чата нет локально
+                        if (chat.room_key) _joinRoom(chat.room_key);
+                    });
+                })
+                .catch(() => {});
+        }
+
+        // Ping каждые 25 сек
         if (ws._pingInterval) clearInterval(ws._pingInterval);
         ws._pingInterval = setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
