@@ -65,6 +65,112 @@
         .user-name, .chat-name, .hdr-name, .chat-header-name { font-weight: 600; letter-spacing: -0.02em; }
 
 
+
+        /* ══════════════════════════════════════════════
+           МОБИЛЬНАЯ ВЕРСИЯ (≤ 768px)
+           ══════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+
+            body { align-items: flex-start; }
+
+            .app {
+                height: 100dvh;
+                border-radius: 0;
+                border: none;
+                max-width: 100%;
+                position: relative;
+            }
+
+            /* Сайдбар — на мобиле занимает весь экран */
+            .sidebar {
+                width: 100%;
+                position: absolute;
+                inset: 0;
+                z-index: 100;
+                background: var(--surface);
+                transition: transform 0.28s ease;
+            }
+            .sidebar.hidden-mobile {
+                transform: translateX(-100%);
+                pointer-events: none;
+            }
+
+            /* Панель чата — на мобиле занимает весь экран */
+            .chat-panel {
+                width: 100%;
+                position: absolute;
+                inset: 0;
+                z-index: 90;
+                background: var(--bg);
+                transition: transform 0.28s ease;
+            }
+            .chat-panel.hidden-mobile {
+                transform: translateX(100%);
+                pointer-events: none;
+            }
+
+            /* Кнопка назад в шапке чата */
+            .back-btn {
+                display: flex !important;
+            }
+
+            /* Шапка чата */
+            .chat-header {
+                padding: 12px 14px;
+            }
+            .chat-header-left {
+                gap: 8px;
+            }
+
+            /* Поле ввода */
+            .input-bar {
+                padding: 0 10px;
+            }
+            .msg-input {
+                font-size: 16px; /* предотвращает zoom на iOS */
+            }
+
+            /* Сообщения */
+            .messages-area {
+                padding: 12px;
+            }
+            .msg { max-width: 85%; }
+
+            /* User bar */
+            .user-bar { padding: 0 12px; }
+
+            /* Поиск */
+            .search-wrap { padding: 8px 10px; }
+
+            /* Модалки — полный экран */
+            .modal {
+                width: 100% !important;
+                max-width: 100% !important;
+                border-radius: 20px 20px 0 0 !important;
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                margin: 0;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            .overlay {
+                align-items: flex-end;
+            }
+
+            /* Боковая панель чата */
+            .chat-info-panel {
+                width: 100% !important;
+                border-radius: 20px 20px 0 0;
+                max-height: 90vh;
+            }
+
+            /* Скрыть некоторые кнопки на мобиле */
+            .msg-search-input { display: none; }
+        }
+
+        /* Кнопка назад — скрыта на десктопе */
+        .back-btn { display: none; }
+
         /* ── AUTH SCREEN ─────────────────────────────── */
         .auth-screen {
             position: fixed; inset: 0;
@@ -1748,6 +1854,11 @@
 
         <div id="chatView" style="display:none;flex-direction:column;flex:1;min-height:0;">
             <div class="chat-header" id="chatHeader">
+                <div style="display:flex;align-items:center;gap:4px;">
+                    <button class="back-btn icon-btn" onclick="showSidebar()" title="Назад">
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    </button>
+                </div>
                 <div class="chat-header-left" onclick="openChatInfo()" title="Информация о чате">
                     <div class="chat-header-ava" id="hdrAva"></div>
                     <div>
@@ -2326,6 +2437,11 @@ function initApp(username, userData) {
     requestNotifPerms();
     currentLang = localStorage.getItem('void_lang') || 'ru';
     applyTranslations();
+    // На мобиле — начать с сайдбара
+    if (isMobile()) {
+        document.querySelector('.chat-panel').classList.add('hidden-mobile');
+        document.querySelector('.sidebar').classList.remove('hidden-mobile');
+    }
 
     // Enter on input (only bind once)
     const mi = document.getElementById('msgInput');
@@ -2453,6 +2569,7 @@ function switchChat(id) {
     renderMsgs();
     renderChats();
     saveChats();
+    showChat(); // на мобиле переключиться на чат
 }
 
 // ── MESSAGES ─────────────────────────────────────────────
@@ -3649,6 +3766,25 @@ function getDisplayName(username) {
     return u ? (u.name || username) : username;
 }
 
+
+// ── MOBILE NAVIGATION ─────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+function showChat() {
+    if (!isMobile()) return;
+    document.querySelector('.sidebar').classList.add('hidden-mobile');
+    document.querySelector('.chat-panel').classList.remove('hidden-mobile');
+}
+
+function showSidebar() {
+    if (!isMobile()) return;
+    document.querySelector('.sidebar').classList.remove('hidden-mobile');
+    document.querySelector('.chat-panel').classList.add('hidden-mobile');
+}
+
+// При открытии чата на мобиле — скрыть сайдбар
+const _origSwitchChat = switchChat;
+// Патч switchChat для мобиле
 // ── GLOBAL SEARCH ─────────────────────────────────────────
 function globalSearch(q) {
     filterChats(q);
