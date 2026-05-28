@@ -51,7 +51,7 @@
             font-family: 'Inter', sans-serif;
             background: var(--bg);
             color: var(--text);
-            height: 100vh;
+            height: 100dvh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -79,16 +79,18 @@
                 border: none;
                 max-width: 100%;
                 position: relative;
+                overflow: visible;
             }
 
             /* Сайдбар — на мобиле занимает весь экран */
             .sidebar {
-                width: 100%;
-                position: absolute;
-                inset: 0;
+                width: 100% !important;
+                position: fixed !important;
+                top: 0; left: 0; right: 0; bottom: 0;
                 z-index: 100;
                 background: var(--surface);
                 transition: transform 0.28s ease;
+                border-right: none !important;
             }
             .sidebar.hidden-mobile {
                 transform: translateX(-100%);
@@ -97,9 +99,9 @@
 
             /* Панель чата — на мобиле занимает весь экран */
             .chat-panel {
-                width: 100%;
-                position: absolute;
-                inset: 0;
+                width: 100% !important;
+                position: fixed !important;
+                top: 0; left: 0; right: 0; bottom: 0;
                 z-index: 90;
                 background: var(--bg);
                 transition: transform 0.28s ease;
@@ -142,19 +144,17 @@
             /* Поиск */
             .search-wrap { padding: 8px 10px; }
 
-            /* Модалки — полный экран */
+            /* Модалки — снизу экрана */
             .modal {
                 width: 100% !important;
                 max-width: 100% !important;
                 border-radius: 20px 20px 0 0 !important;
-                position: fixed;
-                bottom: 0; left: 0; right: 0;
                 margin: 0;
                 max-height: 90vh;
                 overflow-y: auto;
             }
             .overlay {
-                align-items: flex-end;
+                align-items: flex-end !important;
             }
 
             /* Боковая панель чата */
@@ -703,11 +703,11 @@
 
         /* ── MODALS ──────────────────────────────────── */
         .overlay {
-            position: absolute; inset: 0;
+            position: fixed; inset: 0;
             background: rgba(0,0,0,0.4);
             backdrop-filter: blur(8px);
             display: flex; align-items: center; justify-content: center;
-            z-index: 50;
+            z-index: 500;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease;
@@ -1123,7 +1123,7 @@
         /* ── CHAT INFO PANEL ─────────────────────────── */
         .chat-info-overlay {
             position: fixed; inset: 0;
-            z-index: 200;
+            z-index: 500;
             display: flex; justify-content: flex-end;
             pointer-events: none;
         }
@@ -2393,9 +2393,18 @@ function initApp(username, userData) {
     const key = `void_chats_${username}`;
     const savedChats = Store.get(key);
     if (savedChats) {
-        chats = savedChats;
+        // Убрать дубли — оставить только уникальные по roomKey и имени
+        const seen = new Set();
+        const deduped = {};
+        Object.entries(savedChats).forEach(([id, c]) => {
+            const key2 = c.roomKey || (c.name + c.type);
+            if (!seen.has(key2)) {
+                seen.add(key2);
+                deduped[id] = c;
+            }
+        });
+        chats = deduped;
     } else {
-        // Генерируем уникальные id для каждого пользователя
         const favId = String(Date.now());
         const mainId = String(Date.now() + 1);
         chats = {
