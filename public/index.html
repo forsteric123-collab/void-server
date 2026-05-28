@@ -2254,7 +2254,8 @@ function updateUserBarAvatar(userData) {
 
 function initApp(username, userData) {
     currentUsername = username;
-    initE2E(username); // запускаем E2E в фоне
+    // E2E отключено — ключи не синхронизируются между устройствами
+    // initE2E(username);
     const key = `void_chats_${username}`;
     const savedChats = Store.get(key);
     if (savedChats) {
@@ -2407,19 +2408,7 @@ function switchChat(id) {
     document.getElementById('hdrName').textContent = c.name;
     document.getElementById('hdrSub').textContent = c.type;
     const badge = document.getElementById('e2eBadge');
-    if (badge) {
-        if (c.type === 'ЛС' && e2eReady) {
-            badge.textContent = '🔒 E2E';
-            badge.className = 'e2e-badge';
-            badge.style.display = '';
-        } else if (c.type === 'ЛС') {
-            badge.textContent = '🔓 нет ключа';
-            badge.className = 'e2e-badge pending';
-            badge.style.display = '';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
+    if (badge) badge.style.display = 'none';
 
     const pb = document.getElementById('pinnedBar');
     if (c.pinned) {
