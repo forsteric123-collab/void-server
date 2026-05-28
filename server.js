@@ -52,7 +52,6 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_gm_group ON group_messages(group_id);
   CREATE INDEX IF NOT EXISTS idx_members_user ON group_members(username);
-`);
 
   CREATE TABLE IF NOT EXISTS users (
     username    TEXT PRIMARY KEY,
