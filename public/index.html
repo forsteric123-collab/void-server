@@ -310,11 +310,13 @@
         .del-btn svg { fill: currentColor; width: 13px; height: 13px; }
 
         .user-bar {
-            padding: 12px 14px;
+            padding: 0 14px;
+            height: 56px;
             border-top: 1px solid var(--border);
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-shrink: 0;
         }
         .user-ava-wrap {
             position: relative;
@@ -324,8 +326,8 @@
         .user-ava {
             width: 36px; height: 36px;
             border-radius: 50%;
-            background: var(--accent-dim);
-            border: 1px solid var(--accent-glow);
+            background: var(--surface3);
+            border: none;
             display: flex; align-items: center; justify-content: center;
             font-size: 0.9rem;
             overflow: hidden;
@@ -457,9 +459,13 @@
         }
         .msg-bubble img {
             max-width: 220px;
-            border-radius: 10px;
+            border-radius: 8px;
             display: block;
-            cursor: pointer;
+            cursor: zoom-in;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        [data-theme="light"] .msg-bubble img {
+            border: 1px solid rgba(0,0,0,0.08);
         }
 
         .msg-time {
@@ -537,11 +543,13 @@
         .edit-bar.visible { display: flex; }
 
         .input-bar {
-            padding: 12px 16px;
+            padding: 0 14px;
+            height: 56px;
             border-top: 1px solid var(--border);
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-shrink: 0;
         }
         .attach-lbl {
             width: 36px; height: 36px;
@@ -669,10 +677,17 @@
         }
         .ghost-btn:hover { color: var(--text); }
 
-        #lightboxOverlay { cursor: zoom-out; }
+        #lightboxOverlay {
+            cursor: zoom-out;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
         #lightboxOverlay img {
-            max-width: 88vw; max-height: 80vh;
-            border-radius: 12px;
+            max-width: 90vw; max-height: 85vh;
+            border-radius: 10px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            pointer-events: none;
         }
 
         /* ── EMPTY STATE ─────────────────────────────── */
@@ -711,6 +726,26 @@
         #avatarPreview img { width: 100%; height: 100%; object-fit: cover; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .msg-file-wrap {
+            max-width: 260px;
+        }
+        .msg-file-wrap img {
+            max-width: 240px;
+            max-height: 300px;
+            border-radius: 12px;
+            display: block;
+            cursor: zoom-in;
+            border: 1px solid rgba(128,128,128,0.2);
+        }
+        .msg.sent .msg-bubble.is-file,
+        .msg.received .msg-bubble.is-file {
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
         /* ── MSG SENDER WITH AVATAR ──────────────────── */
         .msg-sender-row {
             display: flex;
@@ -1772,13 +1807,20 @@
                 </button>
             </div>
             <div class="quick-replies" id="quickReplies"></div>
+            <!-- Большое превью фото -->
+            <div id="attachBigPreview" style="display:none;padding:8px 16px 0;"></div>
+            <!-- Превью прикреплённого файла -->
+            <div id="attachPreview" style="display:none;padding:6px 16px 0;align-items:center;gap:8px;">
+                <div id="attachThumb" style="width:40px;height:40px;border-radius:6px;overflow:hidden;background:var(--surface3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;"></div>
+                <div id="attachName" style="font-size:0.78rem;color:var(--text-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+                <button onclick="clearAttach()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:1rem;padding:2px 4px;">✕</button>
+            </div>
             <div class="input-bar">
-                <label class="attach-lbl" title="Прикрепить">
+                <label class="attach-lbl" title="Прикрепить файл">
                     <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-3.31 2.69-6 6-6s6 2.69 6 6v10.5c0 4.42-3.58 8-8 8s-8-3.58-8-8V6h2v10.5c0 3.31 2.69 6 6 6s6-2.69 6-6V5c0-2.21-1.79-4-4-4s-4 1.79-4 4v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
-                    <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="attachFile(this)">
+                    <input type="file" id="fileInput" accept="*/*" style="display:none;" onchange="selectFile(this)">
                 </label>
-                <input type="text" class="msg-input" id="msgInput" placeholder="Сообщение…" autocomplete="off" >
-                
+                <input type="text" class="msg-input" id="msgInput" placeholder="Сообщение…" autocomplete="off">
                 <button class="send-btn" onclick="sendMsg()">
                     <svg viewBox="0 0 24 24"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/></svg>
                 </button>
@@ -1956,24 +1998,28 @@ function _handleIncomingMsg(m) {
 
     const isMine = m.sender === currentUsername;
 
-    if (isMine) {
-        // Заменить временный id на серверный
+    // Всегда проверяем дубль по серверному id
+    const alreadyById = chats[cid].messages.find(x => x.id === m.id);
+    if (alreadyById) return;
+
+    if (isMine && m.tmpId) {
+        // Найти временное сообщение по tmpId и заменить id
         const tmpIdx = chats[cid].messages.findIndex(x => x.tmpId === m.tmpId);
         if (tmpIdx !== -1) {
             chats[cid].messages[tmpIdx].id = m.id;
             delete chats[cid].messages[tmpIdx].tmpId;
-        } else {
-            // Проверить на дубль
-            if (!chats[cid].messages.find(x => x.id === m.id)) {
-                chats[cid].messages.push(_buildMsg(m, 'sent'));
-            }
-        }
-    } else {
-        if (!chats[cid].messages.find(x => x.id === m.id)) {
-            chats[cid].messages.push(_buildMsg(m, 'received'));
-            if (cid !== activeId) chats[cid].unread = (chats[cid].unread || 0) + 1;
+            chats[cid].updated = Date.now();
+            if (cid === activeId) renderMsgs();
+            renderChats();
+            saveChats();
+            return;
         }
     }
+
+    // Добавить новое сообщение
+    const type = isMine ? 'sent' : 'received';
+    chats[cid].messages.push(_buildMsg(m, type));
+    if (!isMine && cid !== activeId) chats[cid].unread = (chats[cid].unread || 0) + 1;
 
     chats[cid].updated = Date.now();
     if (cid === activeId) renderMsgs();
@@ -1982,7 +2028,12 @@ function _handleIncomingMsg(m) {
 }
 
 function _buildMsg(m, type) {
-    if (m.isFile) return { id: m.id, fileData: m.text, isFile: true, type, time: m.time, sender: m.sender };
+    if (m.isFile) return {
+        id: m.id, fileData: m.text, isFile: true, type,
+        time: m.time, sender: m.sender,
+        fileName: m.fileName || '', fileType: m.fileType || '',
+        caption: m.caption || ''
+    };
     return { id: m.id, text: m.text, type, time: m.time, sender: m.sender, replyTo: m.replyTo || null };
 }
 
@@ -2456,7 +2507,9 @@ function renderMsgs(filter = '') {
             '</div>' +
             senderRow +
             replyPreview +
-            '<div class="msg-bubble">' + body + '</div>' +
+            (m.isFile
+                ? '<div class="msg-file-wrap">' + body + '</div>'
+                : '<div class="msg-bubble">' + body + '</div>') +
             (reactions ? '<div class="reactions">' + reactions + '</div>' : '') +
             '<div class="msg-time">' + m.time + (m.edited ? ' · изм.' : '') + '</div>';
 
@@ -2470,47 +2523,95 @@ function filterMsgs() { renderMsgs(document.getElementById('msgSearch').value.to
 function sendMsg() {
     const input = document.getElementById('msgInput');
     const text = input.value.trim();
-    if (!text) return;
-    // Проверяем права на отправку
-    if (!canWrite(activeId)) {
-        showToast('🔒 В этом чате можно только читать');
+
+    if (!text && !pendingFile) return;
+    if (!canWrite(activeId)) { showToast('🔒 В этом чате можно только читать'); return; }
+
+    // ── Режим редактирования ──────────────────────────────
+    if (editingId !== null) {
+        if (text) {
+            const m = chats[activeId].messages.find(x => x.id === editingId);
+            if (m) { m.text = text; m.edited = true; }
+        }
+        cancelEdit();
+        input.value = '';
+        renderMsgs(); renderChats(); saveChats();
         return;
     }
 
-    if (editingId !== null) {
-        const m = chats[activeId].messages.find(x => x.id === editingId);
-        if (m) { m.text = text; m.edited = true; }
-        cancelEdit();
-    } else {
-        const tmpId = Date.now();
-        chats[activeId].updated = Date.now();
-        if (useServer && ws && ws.readyState === 1) {
-            // Сервер подключён — добавляем локально сразу, сервер подтвердит через broadcast
-            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), sender: currentUsername, replyTo: replyingTo });
-            const activeRoomKey = chats[activeId]?.roomKey;
-            const isDM = chats[activeId]?.type === 'ЛС';
-            const dmPartner = chats[activeId]?.dmWith;
+    // ── Отправка файла ────────────────────────────────────
+    if (pendingFile) {
+        const file = pendingFile;
+        const caption = text;
+        clearAttach();
+        input.value = '';
 
-            ws.send(JSON.stringify({
-                type: 'message',
-                roomKey: activeRoomKey,
-                text: text,
-                is_sent: true,
-                time: now(),
-                sender: currentUsername,
-                tmpId: tmpId,
-                replyTo: replyingTo
-            }));
-        } else {
-            chats[activeId].messages.push({ id: tmpId, type: 'sent', text, time: now(), replyTo: replyingTo });
-            botReply();
-        }
+        const reader = new FileReader();
+        reader.onload = e => {
+            const fileData = e.target.result;
+            const tmpId = String(Date.now());
+            const msgTime = now();
+            const msg = {
+                id: tmpId, tmpId,
+                type: 'sent', time: msgTime,
+                fileData, fileName: file.name,
+                fileType: file.type,
+                caption: caption || '',
+                isFile: true,
+                sender: currentUsername
+            };
+            chats[activeId].messages.push(msg);
+            chats[activeId].updated = Date.now();
+            renderMsgs(); renderChats(); saveChats();
+
+            // Отправить через WS если есть соединение
+            const rk = chats[activeId]?.roomKey;
+            if (useServer && ws && ws.readyState === WebSocket.OPEN && rk) {
+                ws.send(JSON.stringify({
+                    type: 'message', roomKey: rk,
+                    text: fileData, time: msgTime,
+                    sender: currentUsername, tmpId,
+                    isFile: true, fileName: file.name,
+                    fileType: file.type, caption: caption || ''
+                }));
+            }
+        };
+        reader.readAsDataURL(file);
+
+        // Если нет текста — выходим
+        if (!text) { cancelReply(); return; }
     }
+
+    // ── Отправка текста ───────────────────────────────────
+    if (!text) return;
+
+    const tmpId = String(Date.now());
+    const msgTime = now();
+    const rk = chats[activeId]?.roomKey;
+
+    chats[activeId].messages.push({
+        id: tmpId, tmpId,
+        type: 'sent', text,
+        time: msgTime,
+        sender: currentUsername,
+        replyTo: replyingTo
+    });
+    chats[activeId].updated = Date.now();
+
+    if (useServer && ws && ws.readyState === WebSocket.OPEN && rk) {
+        ws.send(JSON.stringify({
+            type: 'message', roomKey: rk,
+            text, time: msgTime,
+            sender: currentUsername, tmpId,
+            replyTo: replyingTo
+        }));
+    } else if (!useServer) {
+        botReply();
+    }
+
     cancelReply();
     input.value = '';
-    renderMsgs();
-    renderChats();
-    saveChats();
+    renderMsgs(); renderChats(); saveChats();
 }
 
 function botReply() {
@@ -2573,54 +2674,64 @@ function clearHistory() {
     renderChats();
     saveChats();
 }
-function attachFile(input) {
+// Выбранный файл ждёт отправки
+let pendingFile = null;
+
+function selectFile(input) {
     const file = input.files[0];
     if (!file) return;
-
-    // Проверка размера — максимум 2МБ
-    if (file.size > 2 * 1024 * 1024) {
-        showToast('Файл слишком большой. Максимум 2МБ');
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Файл слишком большой. Максимум 5МБ');
         input.value = '';
         return;
     }
+    pendingFile = file;
+    const preview = document.getElementById('attachPreview');
+    const thumb   = document.getElementById('attachThumb');
+    const name    = document.getElementById('attachName');
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        const fileData = e.target.result;
-        const tmpId = Date.now();
+    name.textContent = file.name;
 
-        // Добавляем локально
-        chats[activeId].messages.push({
-            id: tmpId, type: 'sent', time: now(),
-            fileData: fileData, isFile: true,
-            sender: currentUsername, tmpId: tmpId
-        });
-        chats[activeId].updated = Date.now();
-        renderMsgs();
-        renderChats();
-        saveChats();
-
-        // Отправляем через WebSocket если есть соединение
-        const activeRoomKey = chats[activeId]?.roomKey;
-        if (useServer && ws && ws.readyState === WebSocket.OPEN && activeRoomKey) {
-            ws.send(JSON.stringify({
-                type: 'message',
-                roomKey: activeRoomKey,
-                text: fileData,          // base64 картинки
-                is_sent: true,
-                time: now(),
-                sender: currentUsername,
-                tmpId: tmpId,
-                isFile: true
-            }));
-        }
-    };
-    reader.readAsDataURL(file);
-    input.value = ''; // сбросить input чтобы можно было отправить тот же файл снова
+    if (file.type.startsWith('image/')) {
+        const reader2 = new FileReader();
+        reader2.onload = ev => {
+            const dataUrl = ev.target.result;
+            thumb.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">`;
+            document.getElementById('attachBigPreview').innerHTML =
+                `<img src="${dataUrl}" style="max-height:180px;max-width:100%;border-radius:10px;border:1px solid var(--border);display:block;">`;
+            document.getElementById('attachBigPreview').style.display = 'block';
+        };
+        reader2.readAsDataURL(file);
+    } else {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const icons = { pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊',
+                        zip:'🗜', rar:'🗜', mp4:'🎬', mp3:'🎵', txt:'📃' };
+        thumb.textContent = icons[ext] || '📎';
+        document.getElementById('attachBigPreview').style.display = 'none';
+    }
+    preview.style.display = 'flex';
+    input.value = '';
+    document.getElementById('msgInput').focus();
 }
+
+function clearAttach() {
+    pendingFile = null;
+    document.getElementById('attachPreview').style.display = 'none';
+    document.getElementById('attachThumb').innerHTML = '';
+    document.getElementById('attachName').textContent = '';
+    const big = document.getElementById('attachBigPreview');
+    if (big) { big.innerHTML = ''; big.style.display = 'none'; }
+}
+
+// Совместимость со старым кодом
+function attachFile(input) { selectFile(input); }
 function openLightbox(src) {
-    document.getElementById('lightboxImg').src = src;
-    openOverlay('lightboxOverlay');
+    const img = document.getElementById('lightboxImg');
+    const overlay = document.getElementById('lightboxOverlay');
+    img.src = src;
+    overlay.style.opacity = '1';
+    overlay.style.pointerEvents = 'auto';
+    overlay.classList.add('open');
 }
 
 // ── CHATS CRUD ───────────────────────────────────────────
