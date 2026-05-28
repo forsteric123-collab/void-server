@@ -1955,6 +1955,13 @@ function connectWS() {
         Object.values(chats).forEach(c => {
             if (c.roomKey) _joinRoom(c.roomKey);
         });
+        // Ping каждые 25 сек чтобы Railway не разрывал соединение
+        if (ws._pingInterval) clearInterval(ws._pingInterval);
+        ws._pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 25000);
     };
 
     ws.onmessage = (e) => {
@@ -1976,6 +1983,7 @@ function connectWS() {
 
     ws.onclose = () => {
         wsConnecting = false;
+        if (ws._pingInterval) clearInterval(ws._pingInterval);
         console.log('WS закрыт, переподключение через 3с...');
         wsReconnectTimer = setTimeout(connectWS, 3000);
     };

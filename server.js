@@ -232,7 +232,19 @@ app.post('/api/dm', (req, res) => {
 // ── WEBSOCKET ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`Сервер запущен: http://localhost:${PORT}`));
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ 
+    server,
+    perMessageDeflate: false  // отключить сжатие — стабильнее на Railway
+});
+
+// Heartbeat — закрывать мёртвые соединения
+setInterval(() => {
+    wss.clients.forEach(ws => {
+        if (ws.isAlive === false) { ws.terminate(); return; }
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
 
 // roomKey → Set<ws>
 const rooms = new Map();
@@ -240,6 +252,8 @@ const rooms = new Map();
 const clients = new Map();
 
 wss.on('connection', (ws) => {
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
     clients.set(ws, { username: null, rooms: new Set() });
 
     ws.on('message', (raw) => {
@@ -271,7 +285,7 @@ wss.on('connection', (ws) => {
 
             // Сообщение
             if (data.type === 'message') {
-                const { roomKey, text, sender, time, tmpId, isFile, replyTo } = data;
+                const { roomKey, text, sender, time, tmpId, isFile, replyTo, fileName, fileType, caption } = data;
                 if (!roomKey || !sender) return;
 
                 const chat = db.prepare('SELECT id FROM chats WHERE room_key=?').get(roomKey);
@@ -291,6 +305,9 @@ wss.on('connection', (ws) => {
                         sender,
                         replyTo: replyTo || null,
                         isFile: isFile || false,
+                        fileName: fileName || '',
+                        fileType: fileType || '',
+                        caption: caption || '',
                         tmpId: tmpId || null
                     }
                 });
@@ -301,6 +318,12 @@ wss.on('connection', (ws) => {
                         if (c.readyState === 1) c.send(broadcast);
                     });
                 }
+                return;
+            }
+
+            // Ping от клиента — отвечаем pong
+            if (data.type === 'ping') {
+                ws.send(JSON.stringify({ type: 'pong' }));
                 return;
             }
 
