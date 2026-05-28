@@ -135,6 +135,7 @@
             /* Сообщения */
             .messages-area {
                 padding: 12px;
+                -webkit-overflow-scrolling: touch;
             }
             .msg { max-width: 85%; }
 
@@ -174,6 +175,7 @@
         /* ── AUTH SCREEN ─────────────────────────────── */
         .auth-screen {
             position: fixed; inset: 0;
+            z-index: 9999;
             background: var(--bg);
             display: flex; justify-content: center; align-items: center;
             z-index: 9999;
@@ -271,6 +273,7 @@
             border: 1px solid var(--border);
             border-radius: 20px;
             overflow: hidden;
+            position: relative;
         }
 
         /* ── SIDEBAR ─────────────────────────────────── */
@@ -1340,6 +1343,7 @@
             flex-wrap: nowrap;
             overflow-x: auto;
             scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
         }
         .quick-replies::-webkit-scrollbar { display: none; }
         .qr-chip {
@@ -2220,6 +2224,28 @@ const Store = {
 // ── AUTH ─────────────────────────────────────────────────
 function getUsers() { return Store.get('void_users') || {}; }
 function saveUsers(u) { Store.set('void_users', u); }
+
+// Загрузить профиль пользователя с сервера и закешировать
+function fetchUserProfile(username) {
+    return fetch('/api/users/' + username)
+        .then(r => r.json())
+        .then(u => {
+            if (u && !u.error) {
+                const users = getUsers();
+                users[username] = { ...users[username], ...u };
+                saveUsers(users);
+            }
+            return u;
+        })
+        .catch(() => null);
+}
+
+// Получить пользователя — сначала из кеша, потом с сервера
+function getOrFetchUser(username, callback) {
+    const users = getUsers();
+    if (users[username]) { callback(users[username]); return; }
+    fetchUserProfile(username).then(u => { if (u && !u.error) callback(u); });
+}
 function currentUser() { return Store.get('void_session'); }
 
 function setTab(tab) {
@@ -3317,6 +3343,12 @@ function openChatInfo() {
 
     renderCipMembers();
 
+    // Подгрузить данные участников с сервера
+    const members2 = c.members || [currentUsername];
+    members2.forEach(un => {
+        if (useServer) fetchUserProfile(un);
+    });
+
     overlay.style.pointerEvents = 'all';
     panel.classList.add('open');
 }
@@ -3380,9 +3412,9 @@ function renderCipMembers() {
     list.innerHTML = members.map(un => {
         const u = users[un] || { name: un };
         const displayName = getDisplayName(un) || u.name || un;
-        const avaHtml = u.avatar
+        const avaHtml = u && u.avatar
             ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-            : displayName[0].toUpperCase();
+            : (displayName||'?')[0].toUpperCase();
         const roleBadge = getRoleBadge(un, c);
         const isAdmin = c.admins && c.admins.includes(un);
         const isOwner = un === c.owner;
@@ -3445,8 +3477,47 @@ function openAddMember() {
 function searchAddMember(q) {
     const c = chats[activeId];
     const members = c.members || [currentUsername];
-    const users = getUsers();
     const contacts = getContacts();
+
+    // Искать через сервер
+    if (useServer) {
+        const list = document.getElementById('addMemberList');
+        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:14px;">Поиск...</div>';
+        fetch('/api/users/search?q=' + encodeURIComponent(q||'') + '&exclude=' + currentUsername)
+            .then(r => r.json())
+            .then(results => {
+                // Кешировать результаты
+                const users = getUsers();
+                results.forEach(u => { users[u.username] = u; });
+                saveUsers(users);
+
+                const filtered = results.filter(u => !members.includes(u.username));
+                if (!filtered.length) {
+                    list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:14px;">Никого не найдено</div>';
+                    return;
+                }
+                list.innerHTML = filtered.map(u => {
+                    const ct = contacts[u.username];
+                    const displayName = (ct && ct.nick) || u.name || u.username;
+                    const ava = u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : displayName[0].toUpperCase();
+                    return `<div class="people-item" onclick="addMember('${u.username}')">
+                        <div class="people-ava">${ava}</div>
+                        <div class="people-info">
+                            <div class="people-name">${displayName}</div>
+                            <div class="people-tag">@${u.username}</div>
+                        </div>
+                        <span style="font-size:0.75rem;color:var(--accent);">+ добавить</span>
+                    </div>`;
+                }).join('');
+            })
+            .catch(() => _searchAddMemberLocal(q, members, contacts));
+        return;
+    }
+    _searchAddMemberLocal(q, members, contacts);
+}
+
+function _searchAddMemberLocal(q, members, contacts) {
+    const users = getUsers();
 
     // Сначала показываем контакты, потом остальных
     const contactEntries = Object.entries(contacts)
@@ -3470,8 +3541,8 @@ function searchAddMember(q) {
         : contactEntries;
 
     const results = [...filteredContacts, ...otherEntries];
-
-    const list = document.getElementById('addMemberList');
+    const list2 = document.getElementById('addMemberList');
+    const list = list2;
     if (!results.length) {
         list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-3);text-align:center;padding:14px;">Никого не найдено</div>';
         return;
@@ -3682,9 +3753,9 @@ function renderContactsList() {
         const ct = contacts[un];
         const displayName = ct.nick || u.name || un;
         const isOnline = u.status !== 'offline';
-        const avaHtml = u.avatar
+        const avaHtml = u && u.avatar
             ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-            : displayName[0].toUpperCase();
+            : (displayName||'?')[0].toUpperCase();
 
         return `<div class="contact-item">
             <div class="contact-ava" onclick="openUserProfile('${un}')">
@@ -4088,16 +4159,28 @@ function scrollToMsg(id) {
 
 // ── USER PROFILE ───────────────────────────────────────────
 function openUserProfile(username) {
-    // Сначала показываем из кеша, потом обновляем с сервера
     const users = getUsers();
     let u = users[username];
+    // Показать из кеша сразу
     if (u) _renderUserProfile(username, u);
+    else {
+        // Показать загрузку
+        document.getElementById('upName').textContent = username;
+        document.getElementById('upTag').textContent = '@' + username;
+        openOverlay('userProfileOverlay');
+    }
+    // Всегда обновить с сервера
     fetch('/api/users/' + username)
         .then(r => r.json())
         .then(fresh => {
-            if (fresh.error) { if (!u) showToast('Пользователь не найден'); return; }
-            users[username] = fresh; saveUsers(users);
-            _renderUserProfile(username, fresh);
+            if (fresh.error) {
+                if (!u) showToast('Пользователь не найден');
+                return;
+            }
+            // Кешировать
+            users[username] = { ...u, ...fresh };
+            saveUsers(users);
+            _renderUserProfile(username, users[username]);
         })
         .catch(() => { if (!u) showToast('Сервер недоступен'); });
 }
